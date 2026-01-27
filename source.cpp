@@ -85,7 +85,39 @@ struct Image{
 	}
 };
 
+enum STATE{
+	START_STATE
+};
+
+class Player{
+public:
+	Player() : betAmount(0), tag("") {}
+	
+	void SetBet(float value) {
+		betAmount = value;
+	}
+
+	void SetTag(std::string name) {
+		tag = name;
+	}
+
+	std::string GetTag(){
+		return tag;
+	}
+
+private:
+	float betAmount;
+	std::string tag;
+};
+
 int main(){
+	STATE state = STATE::START_STATE;
+	Player* player = new Player();
+	Player* dealer = new Player();
+	std::vector<Player*> players;
+	players.push_back(player);
+	players.push_back(dealer);
+	
 	int width = 800, height = 600;
 	
 	sf::RenderWindow window(sf::VideoMode(width, height), "21");
@@ -151,6 +183,14 @@ int main(){
 		}
 
 		window.clear();		
+		
+		switch(state){
+			case START_STATE:
+				print("START_STATE");
+				
+				break;
+					
+		}
 		
 		if(checkCollision(cardCollision, mouseMove)){
 			if(cardEnter != true){
