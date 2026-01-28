@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <string>
 #include <chrono>
@@ -110,6 +111,40 @@ private:
 	std::string tag;
 };
 
+class Button{
+public:
+	Button(sf::Vector2f position, sf::Vector2f size) : position(position), size(size), isActive(false), shape(new sf::RectangleShape()) {}
+	
+	void SetPostion(sf::Vector2f position) {
+		position = position;
+	}
+
+	sf::Vector2f GetPosition(){
+		return position;
+	}
+
+	void SetSize(sf::Vector2f size) {
+		size = size;
+	}
+
+	sf::Vector2f GetSize(){
+		return size;
+	}
+
+	sf::RectangleShape* GetShape(){
+
+		shape->setSize(sf::Vector2f(size.x, size.y));
+		shape->setPosition(sf::Vector2f(position.x, position.y));
+		return shape;
+	}
+
+ 	bool isActive;
+private:
+	sf::Vector2f size;
+	sf::Vector2f position;
+	sf::RectangleShape* shape;
+};
+
 int main(){
 	STATE state = STATE::START_STATE;
 	Player* player = new Player();
@@ -117,13 +152,26 @@ int main(){
 	std::vector<Player*> players;
 	players.push_back(player);
 	players.push_back(dealer);
+
+	int current_player_id = 0;
 	
+	Button* button_bet_1 = new Button(sf::Vector2f(100, 180), sf::Vector2f(100, 180));
+	button_bet_1->isActive = true;
+	
+	Button* button_bet_2 = new Button(sf::Vector2f(250, 180), sf::Vector2f(100, 180));
+	button_bet_2->isActive = true;	
+
+	std::vector<Button*> buttons;
+	buttons.push_back(button_bet_1);
+	buttons.push_back(button_bet_2);
+
 	int width = 800, height = 600;
 	
 	sf::RenderWindow window(sf::VideoMode(width, height), "21");
 	
 	sf::Vector2i mouseMove;
-	
+	bool mouseDown;	
+
 	sf::Vector2f cardSize(110, 180);
 	sf::RectangleShape card(cardSize);
 	card.setPosition(width / 2 - cardSize.x / 2, height / 2 - cardSize.y / 2);
@@ -180,10 +228,16 @@ int main(){
 				mouseMove.y = event.mouseMove.y;
 			}
 			
+			if (event.mouseButton.button == sf::Mouse::Left){
+
+			}
+			
 		}
 
 		window.clear();		
 		
+		
+
 		switch(state){
 			case START_STATE:
 				print("START_STATE");
@@ -191,29 +245,22 @@ int main(){
 				break;
 					
 		}
-		
-		if(checkCollision(cardCollision, mouseMove)){
-			if(cardEnter != true){
-				cardEnter = true;
-				card.setFillColor(sf::Color(0, 120, 255));
-				
-				card.setPosition(card.getPosition().x, card.getPosition().y - riseAmount);
-				cardCollision = card.getGlobalBounds();
-				cardCollision.height+=50;
-	
+
+		for(auto& button : buttons) {
+			sf::Vector2f position = button->GetPosition();
+			sf::Vector2f size = button->GetSize();
+			sf::FloatRect collider(position.x, position.y, size.x, size.y);
+			if(checkCollision(collider, mouseMove)){
+				button->GetShape()->setFillColor(sf::Color(50, 200, 30));
+			}
+			else{
+				button->GetShape()->setFillColor(sf::Color(255, 255, 255));
 			}
 		}
-		else{
-			if(cardEnter != false){
-				cardEnter = false;
-				card.setFillColor(sf::Color(255, 255, 255));
-				
-				card.setPosition(width / 2 - cardSize.x / 2, height / 2 - cardSize.y / 2);
-				cardCollision = card.getGlobalBounds();
-			}
+
+		for(auto& button : buttons){
+			window.draw(*(button->GetShape()));
 		}
-			
-		window.draw(card);
 		
 		window.display();
 	}
