@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <chrono>
+#include <sstream>
+#include <iomanip>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
@@ -111,12 +113,29 @@ private:
 	std::string tag;
 };
 
+std::string ToPresisionString(float value, int digits){
+	
+ 	std::ostringstream oss;
+	oss << std::fixed << std::setprecision(digits) << value;
+	return oss.str();
+}
+
 class Button{
 public:
-	Button(sf::Vector2f position, sf::Vector2f size) : position(position), size(size), isActive(false), shape(new sf::RectangleShape()) {}
+	Button(sf::Vector2f position, sf::Vector2f size, sf::Font& font) : 
+		position(position), size(size), 
+		isActive(false), shape(new sf::RectangleShape()), 
+		text(new sf::Text()) 
+	{
+		text->setFont(font);
+		text->setCharacterSize(20);
+		text->setFillColor(sf::Color::Black);
+		text->setPosition(position);
+	}
 	
-	void SetPostion(sf::Vector2f position) {
+	void SetPosition(sf::Vector2f position) {
 		position = position;
+		text->setPosition(position);
 	}
 
 	sf::Vector2f GetPosition(){
@@ -137,12 +156,22 @@ public:
 		shape->setPosition(sf::Vector2f(position.x, position.y));
 		return shape;
 	}
+	
+	void SetText(std::string newText){
+		text->setString(newText);
+	}
+
+	sf::Text* GetText(){
+		return text;
+	}
 
  	bool isActive;
 private:
 	sf::Vector2f size;
 	sf::Vector2f position;
 	sf::RectangleShape* shape;
+
+	sf::Text* text;
 };
 
 int main(){
@@ -152,25 +181,44 @@ int main(){
 	std::vector<Player*> players;
 	players.push_back(player);
 	players.push_back(dealer);
-
+	
 	int current_player_id = 0;
+	float scoreValue = 327.328;
+
+	std::string score = ToPresisionString(scoreValue, 2) + " $";
+
+	sf::Font font;
+	if(!font.loadFromFile("Zepter_Pro.ttf")){
+		print("ERROR: font loading!");
+	}
 	
-	Button* button_bet_1 = new Button(sf::Vector2f(100, 180), sf::Vector2f(100, 180));
+	sf::Text scoreText;
+	scoreText.setFont(font);
+	scoreText.setString(score);
+	scoreText.setCharacterSize(20);
+	scoreText.setFillColor(sf::Color::Black);
+	//scoreText.setPosition();
+
+	int width = 800, height = 600;
+
+	// BUTTONS
+	Button* button_bet_1 = new Button(sf::Vector2f(width/2, height/2+60), sf::Vector2f(40, 40), font);
 	button_bet_1->isActive = true;
+	button_bet_1->SetText("10%");
 	
-	Button* button_bet_2 = new Button(sf::Vector2f(250, 180), sf::Vector2f(100, 180));
-	button_bet_2->isActive = true;	
+	Button* button_bet_2 = new Button(sf::Vector2f(width/2+60, height/2+60), sf::Vector2f(40, 40), font);
+	button_bet_2->isActive = true;
+	button_bet_2->SetText("40%");
+	//
 
 	std::vector<Button*> buttons;
 	buttons.push_back(button_bet_1);
 	buttons.push_back(button_bet_2);
 
-	int width = 800, height = 600;
-	
 	sf::RenderWindow window(sf::VideoMode(width, height), "21");
 	
 	sf::Vector2i mouseMove;
-	bool mouseDown;	
+	bool mouseLeftDown;
 
 	sf::Vector2f cardSize(110, 180);
 	sf::RectangleShape card(cardSize);
@@ -228,40 +276,53 @@ int main(){
 				mouseMove.y = event.mouseMove.y;
 			}
 			
-			if (event.mouseButton.button == sf::Mouse::Left){
-
+			if(event.type == sf::Event::MouseButtonPressed){
+				if (event.mouseButton.button == sf::Mouse::Left){
+					mouseLeftDown = true;
+				}
+			}
+			if(event.type == sf::Event::MouseButtonReleased){
+				if (event.mouseButton.button == sf::Mouse::Left){
+					mouseLeftDown = false;
+				}
 			}
 			
 		}
 
-		window.clear();		
-		
-		
+		window.clear(sf::Color::Cyan);		
 
 		switch(state){
 			case START_STATE:
-				print("START_STATE");
+				//print("START_STATE");
 				
+				for(auto& button : buttons) {
+					sf::Vector2f position = button->GetPosition();
+					sf::Vector2f size = button->GetSize();
+					sf::FloatRect collider(position.x, position.y, size.x, size.y);
+					if(checkCollision(collider, mouseMove)){
+						button->GetShape()->setFillColor(sf::Color(50, 200, 30));
+						if(mouseLeftDown){
+							button->GetShape()->setFillColor(sf::Color(50, 60, 200));
+							
+						}
+					}
+					else{
+						button->GetShape()->setFillColor(sf::Color(255, 255, 255));
+					}
+				}
+
 				break;
 					
 		}
 
-		for(auto& button : buttons) {
-			sf::Vector2f position = button->GetPosition();
-			sf::Vector2f size = button->GetSize();
-			sf::FloatRect collider(position.x, position.y, size.x, size.y);
-			if(checkCollision(collider, mouseMove)){
-				button->GetShape()->setFillColor(sf::Color(50, 200, 30));
-			}
-			else{
-				button->GetShape()->setFillColor(sf::Color(255, 255, 255));
-			}
-		}
+
 
 		for(auto& button : buttons){
 			window.draw(*(button->GetShape()));
+			window.draw(*(button->GetText()));
 		}
-		
+		window.draw(scoreText);		
+
 		window.display();
 	}
 	
