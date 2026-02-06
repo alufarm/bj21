@@ -137,8 +137,8 @@ struct PointCollider{
 };
 
 bool BoxVsPoint(BoxCollider& box, sf::Vector2i& point){
-	if(point.x > box.x1 && point.x < box.x2
-		&& point.y > box.y1 && point.y < box.y2){
+	if(point.x > box.x1 && point.x < box.x2 &&
+           point.y > box.y1 && point.y < box.y2){
 		return true;
 	}
 	return false;
@@ -150,7 +150,7 @@ public:
 	virtual void OnCollisionEnter()=0;
 	virtual void OnCollisionExit()=0;
 
-	BoxCollider GetCollider(){
+	BoxCollider& GetCollider(){
 		return box;
 	}
 };
@@ -160,19 +160,18 @@ public:
 	Button(sf::Vector2f position, sf::Vector2f size, sf::Font& font) : 
 		position(position), size(size), 
 		isActive(false), shape(new sf::RectangleShape()), 
-		text(new sf::Text()), value(0)
+		text(new sf::Text()), value(0), color(sf::Color::White)
 	{
 		text->setFont(font);
 		text->setCharacterSize(20);
 		text->setFillColor(sf::Color::Black);
 		text->setPosition(position);
+		ResetBox();
 	}
 	
 	void SetPosition(sf::Vector2f position) {
 		position = position;
 		text->setPosition(position);
-
-		ResetBox();
 	}
 
 	sf::Vector2f GetPosition(){
@@ -216,11 +215,15 @@ public:
 	}
 
 	virtual void OnCollisionEnter(){
-
+		print("Enter");
+		SetPosition(sf::Vector2f(90, 90));
+		SetColor(sf::Color(255, 0, 0));
 	}
 
 	virtual void OnCollisionExit(){
-
+		print("Exit");
+		SetColor(sf::Color::White);
+		
 	}
 
 	void SetColor(sf::Color color){
@@ -240,6 +243,7 @@ private:
 	sf::Vector2f size;
 	sf::Vector2f position;
 	sf::RectangleShape* shape;
+	sf::Color color;	
 
 	sf::Text* text;
 	float value;
@@ -385,16 +389,16 @@ int main(){
 					sf::Vector2f size = button->GetSize();
 					sf::FloatRect collider(position.x, position.y, size.x, size.y);
 					if(checkCollision(collider, mouseMove)){
-						button->GetShape()->setFillColor(sf::Color(50, 200, 30));
+						//button->GetShape()->setFillColor(sf::Color(50, 200, 30));
 						if(mouseLeftDownFirst){
 							scoreValue -= scoreValue * button->GetValue();
 							score = ToPresisionString(scoreValue, 2) + " $";
 							scoreText.setString(score);
-							button->GetShape()->setFillColor(sf::Color(50, 60, 200));
+							//button->GetShape()->setFillColor(sf::Color(50, 60, 200));
 						}
 					}
 					else{
-						button->GetShape()->setFillColor(sf::Color(255, 255, 255));
+						//button->GetShape()->setFillColor(sf::Color(255, 255, 255));
 					}
 				}
 
@@ -407,8 +411,12 @@ int main(){
 
 		for(ICollidable*& object : collidableObjects){
 			BoxCollider box = object->GetCollider();
+
 			if(BoxVsPoint(box, mouseMove)){
-				object
+				object->OnCollisionEnter();
+			}
+			else{
+				object->OnCollisionExit();
 			}
 		}
 
