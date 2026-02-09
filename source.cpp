@@ -34,6 +34,14 @@ void print(sf::Vector2i iVect){
 	print(std::to_string(iVect.x) + ", " + std::to_string(iVect.y));
 }
 
+void print(sf::Vector2f fVect){
+	print(std::to_string(fVect.x) + ", " + std::to_string(fVect.y));
+}
+
+void print(sf::Color color){
+	print(std::to_string(color.r) + ", " + std::to_string(color.g) + ", " + std::to_string(color.b));
+}
+
 bool checkCollision(sf::FloatRect fRect, sf::Vector2i point){
 	if(point.x > fRect.left && point.x < fRect.left + fRect.width
 		&& point.y > fRect.top && point.y < fRect.top + fRect.height){
@@ -132,6 +140,10 @@ struct BoxCollider{
 	float x2, y2;
 };
 
+void print(BoxCollider& box){
+	print(std::to_string(box.x1) + ", " + std::to_string(box.y1) + ", " + std::to_string(box.x2) + ", " + std::to_string(box.y2));
+}
+
 struct PointCollider{
 	float x, y;
 };
@@ -166,12 +178,20 @@ public:
 		text->setCharacterSize(20);
 		text->setFillColor(sf::Color::Black);
 		text->setPosition(position);
-		ResetBox();
+		
+		SetPosition(position);
+		SetSize(size);
+		SetColor(color);
 	}
 	
 	void SetPosition(sf::Vector2f position) {
 		position = position;
+		shape->setPosition(position);
 		text->setPosition(position);
+
+		print(box);
+		ResetBox();
+		print(box);
 	}
 
 	sf::Vector2f GetPosition(){
@@ -180,6 +200,8 @@ public:
 
 	void SetSize(sf::Vector2f size) {
 		size = size;
+		shape->setSize(size);
+		ResetBox();
 	}
 
 	sf::Vector2f GetSize(){
@@ -206,22 +228,21 @@ public:
 	}
 
 	float GetValue(){
-		return value;
+		return value;  
 	}
 
 	virtual void Draw(sf::RenderWindow& window){
+
 		window.draw(*shape);
 		window.draw(*text);
 	}
 
 	virtual void OnCollisionEnter(){
-		print("Enter");
-		SetPosition(sf::Vector2f(90, 90));
+		SetPosition(sf::Vector2f(200, 90));
 		SetColor(sf::Color(255, 0, 0));
 	}
 
 	virtual void OnCollisionExit(){
-		print("Exit");
 		SetColor(sf::Color::White);
 		
 	}
@@ -243,13 +264,67 @@ private:
 	sf::Vector2f size;
 	sf::Vector2f position;
 	sf::RectangleShape* shape;
-	sf::Color color;	
+	sf::Color color;
 
 	sf::Text* text;
 	float value;
 };
 
+class TestShape : public IDrawable, public ICollidable
+{
+public:
+	TestShape() : shape(new sf::RectangleShape())
+	{
+		
+	}
 
+	void SetPosition(sf::Vector2f position)
+	{
+		shape->setPosition(position);
+		ResetBox();
+	}
+
+	void SetSize(sf::Vector2f size)
+	{	
+		shape->setSize(size);
+		ResetBox();
+	}
+	
+	void SetColor(sf::Color color)
+	{
+		shape->setFillColor(color);
+	}
+
+	virtual void Draw(sf::RenderWindow& window)
+	{
+		window.draw(*shape);	
+	}
+	
+	virtual void OnCollisionEnter()
+	{
+		print("PO");
+		SetColor(sf::Color(0, 0, 255));
+	}
+	
+	virtual void OnCollisionExit()
+	{
+		
+		SetColor(sf::Color(255, 0, 0));
+	}
+private:
+	
+	void ResetBox(){
+		sf::Vector2f position = shape->getPosition();
+		sf::Vector2f size = shape->getSize();
+		
+		box.x1 = position.x;
+		box.y1 = position.y;
+		box.x2 = position.x + size.x;
+		box.y2 = position.y + size.y;
+	}
+
+	sf::RectangleShape* shape;
+};
 
 int main(){
 	STATE state = STATE::START_STATE;
@@ -289,6 +364,11 @@ int main(){
 	button_bet_2->SetText("40%");
 	button_bet_2->SetValue(0.4f);
 	//
+	
+	TestShape* sh = new TestShape();
+	sh->SetPosition(sf::Vector2f(100, 100));
+	sh->SetSize(sf::Vector2f(100, 100));
+	sh->SetColor(sf::Color(255, 0, 0));
 
 	std::vector<Button*> buttons;
 	buttons.push_back(button_bet_1);
@@ -297,10 +377,12 @@ int main(){
 	std::vector<IDrawable*> drawableObjects;
 	drawableObjects.push_back(button_bet_1);
 	drawableObjects.push_back(button_bet_2);
+	drawableObjects.push_back(sh);
 
 	std::vector<ICollidable*> collidableObjects;
 	collidableObjects.push_back(button_bet_1);
-	collidableObjects.push_back(button_bet_2);
+	collidableObjects.push_back(button_bet_2); 
+	collidableObjects.push_back(sh);
 
 	sf::RenderWindow window(sf::VideoMode(width, height), "21");
 	
@@ -324,7 +406,7 @@ int main(){
 	double deltaTime = 0;
 	
 	Timer frameTimer;
-	
+
 	sf::Event event;
 	while(window.isOpen()){
 		deltaTime = frameTimer.elapsed();
@@ -424,6 +506,7 @@ int main(){
 			object->Draw(window);
 		}
 		window.draw(scoreText);
+		//sh->Draw(window);
 
 		window.display();
 
