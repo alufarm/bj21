@@ -56,48 +56,6 @@ float interpolate(float a, float b, float p){
 	return a + (b-a) * p;
 }
 
-struct RectShape{
-	
-	void SetPosition(sf::Vector2f position){
-		shape.setPosition(position);
-		collision = shape.getGlobalBounds();
-	}
-	
-	void SetSize(sf::Vector2f size){
-		shape.setSize(size);
-	}
-	
-	sf::FloatRect GetGlobalBounds(){
-		return shape.getGlobalBounds();
-	}
-	
-	bool CheckCollision(sf::Vector2i point){
-		if(point.x > collision.left && point.x < collision.left + collision.width
-			&& point.y > collision.top && point.y < collision.top + collision.height){
-			return true;
-		}
-		return false;
-	}
-	
-private:
-	sf::RectangleShape shape;
-	sf::FloatRect collision;
-	bool onCollision;
-};
-
-struct Image{
-	sf::Image image;
-	sf::Texture texture;
-	sf::Sprite sprite;
-	
-	void Load(std::string path){
-		if (!(image.loadFromFile(path)))
-			std::cout << "Cannot load image";
-		texture.loadFromImage(image);
-		sprite.setTexture(texture);  
-	}
-};
-
 enum STATE{
 	START_STATE,
 	DISTRIB_STATE
@@ -131,32 +89,6 @@ std::string ToPresisionString(float value, int digits){
 	return oss.str();
 }
 
-class IDrawable{
-public:
-	virtual void Draw(sf::RenderWindow&)=0;
-};
-
-struct BoxCollider{
-	float x1, y1;
-	float x2, y2;
-};
-
-void print(BoxCollider& box){
-	print(std::to_string(box.x1) + ", " + std::to_string(box.y1) + ", " + std::to_string(box.x2) + ", " + std::to_string(box.y2));
-}
-
-struct PointCollider{
-	float x, y;
-};
-
-bool BoxVsPoint(BoxCollider& box, sf::Vector2i& point){
-	if(point.x > box.x1 && point.x < box.x2 &&
-           point.y > box.y1 && point.y < box.y2){
-		return true;
-	}
-	return false;
-}
-
 bool BoxVsPoint(sf::FloatRect& rect, sf::Vector2i& point){
 	if(point.x > rect.left && point.x < rect.left + rect.width &&
            point.y > rect.top && point.y < rect.top + rect.height){
@@ -164,13 +96,6 @@ bool BoxVsPoint(sf::FloatRect& rect, sf::Vector2i& point){
 	}
 	return false;
 }
-
-class ICollidable{
-public:
-
-	virtual void OnCollisionEnter()=0;
-	virtual void OnCollisionExit()=0;
-};
 
 class Button {
 public:
@@ -406,7 +331,6 @@ int main(){
 			}
 		}
 		window.draw(scoreText);
-		//sh->Draw(window);
 
 		window.display();
 
