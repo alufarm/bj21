@@ -1,5 +1,6 @@
 
 
+
 #include <iostream>
 #include <string>
 #include <chrono>
@@ -156,177 +157,109 @@ bool BoxVsPoint(BoxCollider& box, sf::Vector2i& point){
 	return false;
 }
 
+bool BoxVsPoint(sf::FloatRect& rect, sf::Vector2i& point){
+	if(point.x > rect.left && point.x < rect.left + rect.width &&
+           point.y > rect.top && point.y < rect.top + rect.height){
+		return true;
+	}
+	return false;
+}
+
 class ICollidable{
 public:
-	BoxCollider box;
+
 	virtual void OnCollisionEnter()=0;
 	virtual void OnCollisionExit()=0;
-
-	BoxCollider& GetCollider(){
-		return box;
-	}
 };
 
-class Button : public IDrawable, public ICollidable{
+class Button {
 public:
 	Button(sf::Vector2f position, sf::Vector2f size, sf::Font& font) : 
-		position(position), size(size), 
-		isActive(false), shape(new sf::RectangleShape()), 
-		text(new sf::Text()), value(0), color(sf::Color::White)
+		mPosition(position), mSize(size), 
+		mActive(true), mShape(new sf::RectangleShape()), 
+		mText(new sf::Text()), mColor(sf::Color::White)
 	{
-		text->setFont(font);
-		text->setCharacterSize(20);
-		text->setFillColor(sf::Color::Black);
-		text->setPosition(position);
+		mText->setFont(font);
+		mText->setCharacterSize(20);
+		mText->setFillColor(sf::Color::Black);
+		mText->setPosition(position);
 		
-		SetPosition(position);
-		SetSize(size);
-		SetColor(color);
+		SetPosition(mPosition);
+		SetSize(mSize);
+		SetColor(mColor);
 	}
 	
-	void SetPosition(sf::Vector2f position) {
-		position = position;
-		shape->setPosition(position);
-		text->setPosition(position);
-
-		print(box);
-		ResetBox();
-		print(box);
+	void SetPosition(sf::Vector2f pos) {
+		mPosition = pos;
+		mShape->setPosition(mPosition);
+		mText->setPosition(mPosition);
 	}
 
 	sf::Vector2f GetPosition(){
-		return position;
+		return mPosition;
 	}
 
-	void SetSize(sf::Vector2f size) {
-		size = size;
-		shape->setSize(size);
-		ResetBox();
+	void SetSize(sf::Vector2f value) {
+		mSize = value;
+		mShape->setSize(mSize);
 	}
 
 	sf::Vector2f GetSize(){
-		return size;
-	}
-
-	sf::RectangleShape* GetShape(){
-
-		shape->setSize(sf::Vector2f(size.x, size.y));
-		shape->setPosition(sf::Vector2f(position.x, position.y));
-		return shape;
+		return mSize;
 	}
 	
-	void SetText(std::string newText){
-		text->setString(newText);
+	void SetText(std::string value){
+		mText->setString(value);
 	}
 
 	sf::Text* GetText(){
-		return text;
+		return mText;
 	}
 
-	void SetValue(float val){
-		value = val;
+	void Draw(sf::RenderWindow& window){
+
+		window.draw(*mShape);
+		window.draw(*mText);
 	}
 
-	float GetValue(){
-		return value;  
-	}
-
-	virtual void Draw(sf::RenderWindow& window){
-
-		window.draw(*shape);
-		window.draw(*text);
-	}
-
-	virtual void OnCollisionEnter(){
-		SetPosition(sf::Vector2f(200, 90));
+	void OnCollisionEnter(){
 		SetColor(sf::Color(255, 0, 0));
 	}
 
-	virtual void OnCollisionExit(){
+	void OnCollisionExit(){
 		SetColor(sf::Color::White);
-		
 	}
 
 	void SetColor(sf::Color color){
-		shape->setFillColor(color);
+		mShape->setFillColor(color);
 	}
 
- 	bool isActive;
+	sf::FloatRect GetGlobalBounds(){
+		return mShape->getGlobalBounds();
+	}
+
+	void SetActive(bool value){
+		mActive = value;
+	}
+
+	bool GetActive(){
+		return mActive;
+	}
+
 private:
+	bool mActive;
 
-	void ResetBox(){
-		box.x1 = position.x;
-		box.y1 = position.y;
-		box.x2 = position.x + size.x;
-		box.y2 = position.y + size.y;
-	}
+	sf::Vector2f mSize;
+	sf::Vector2f mPosition;
+	sf::RectangleShape* mShape;
+	sf::Color mColor;
 
-	sf::Vector2f size;
-	sf::Vector2f position;
-	sf::RectangleShape* shape;
-	sf::Color color;
-
-	sf::Text* text;
-	float value;
-};
-
-class TestShape : public IDrawable, public ICollidable
-{
-public:
-	TestShape() : shape(new sf::RectangleShape())
-	{
-		
-	}
-
-	void SetPosition(sf::Vector2f position)
-	{
-		shape->setPosition(position);
-		ResetBox();
-	}
-
-	void SetSize(sf::Vector2f size)
-	{	
-		shape->setSize(size);
-		ResetBox();
-	}
-	
-	void SetColor(sf::Color color)
-	{
-		shape->setFillColor(color);
-	}
-
-	virtual void Draw(sf::RenderWindow& window)
-	{
-		window.draw(*shape);	
-	}
-	
-	virtual void OnCollisionEnter()
-	{
-		print("PO");
-		SetColor(sf::Color(0, 0, 255));
-	}
-	
-	virtual void OnCollisionExit()
-	{
-		
-		SetColor(sf::Color(255, 0, 0));
-	}
-private:
-	
-	void ResetBox(){
-		sf::Vector2f position = shape->getPosition();
-		sf::Vector2f size = shape->getSize();
-		
-		box.x1 = position.x;
-		box.y1 = position.y;
-		box.x2 = position.x + size.x;
-		box.y2 = position.y + size.y;
-	}
-
-	sf::RectangleShape* shape;
+	sf::Text* mText;
 };
 
 int main(){
+	int width = 800, height = 600;
+
 	STATE state = STATE::START_STATE;
 	Player* player = new Player();
 	Player* dealer = new Player();
@@ -351,53 +284,31 @@ int main(){
 	scoreText.setFillColor(sf::Color::Black);
 	//scoreText.setPosition();
 
-	int width = 800, height = 600;
+	std::string betContent = "Your bet: ";
+	sf::Text betText;
+	betText.setFont(font);
+	betText.setString(betContent);
+	betText.setCharacterSize(20);
+	betText.setFillColor(sf::Color::Black);
+	betText.setPosition(sf::Vector2f(width/2, 0));
 
 	// BUTTONS
 	Button* button_bet_1 = new Button(sf::Vector2f(width/2, height/2+60), sf::Vector2f(40, 40), font);
-	button_bet_1->isActive = true;
 	button_bet_1->SetText("10%");
-	button_bet_1->SetValue(0.1f);
 	
 	Button* button_bet_2 = new Button(sf::Vector2f(width/2+60, height/2+60), sf::Vector2f(40, 40), font);
-	button_bet_2->isActive = true;
 	button_bet_2->SetText("40%");
-	button_bet_2->SetValue(0.4f);
 	//
-	
-	TestShape* sh = new TestShape();
-	sh->SetPosition(sf::Vector2f(100, 100));
-	sh->SetSize(sf::Vector2f(100, 100));
-	sh->SetColor(sf::Color(255, 0, 0));
 
 	std::vector<Button*> buttons;
 	buttons.push_back(button_bet_1);
 	buttons.push_back(button_bet_2);
-
-	std::vector<IDrawable*> drawableObjects;
-	drawableObjects.push_back(button_bet_1);
-	drawableObjects.push_back(button_bet_2);
-	drawableObjects.push_back(sh);
-
-	std::vector<ICollidable*> collidableObjects;
-	collidableObjects.push_back(button_bet_1);
-	collidableObjects.push_back(button_bet_2); 
-	collidableObjects.push_back(sh);
 
 	sf::RenderWindow window(sf::VideoMode(width, height), "21");
 	
 	sf::Vector2i mouseMove;
 	bool mouseLeftDown;
 	bool mouseLeftDownFirst;
-
-	sf::Vector2f cardSize(110, 180);
-	sf::RectangleShape card(cardSize);
-	card.setPosition(width / 2 - cardSize.x / 2, height / 2 - cardSize.y / 2);
-	card.setSize(cardSize);
-	bool cardEnter = false;
-	sf::FloatRect cardCollision = card.getGlobalBounds();
-	
-	float riseAmount = 50;
 	
 	double targetDurationTime = 1.0;
 	double durationAccumTime = 0;
@@ -414,7 +325,6 @@ int main(){
 		frames++;
 		durationAccumTime += deltaTime;
 		if(durationAccumTime > targetDurationTime){
-			//print(frames);
 			frames = 0;
 			durationAccumTime = 0;
 		}
@@ -429,16 +339,6 @@ int main(){
 				
 				sf::FloatRect visibleArea(0.f, 0.f, event.size.width, event.size.height);
 				window.setView(sf::View(visibleArea));
-				
-				card.setPosition(width / 2 - cardSize.x / 2, height / 2 - cardSize.y / 2);
-				card.setSize(cardSize);
-				
-				if(cardEnter){
-					cardCollision = card.getGlobalBounds();
-					cardCollision.height+=50;
-				}
-				else
-					cardCollision = card.getGlobalBounds();
 			}
 			
 			if(event.type == sf::Event::MouseMoved){
@@ -462,27 +362,10 @@ int main(){
 
 		window.clear(sf::Color::Cyan);		
 
-		switch(state){
+		switch(state)
+		{
 			case START_STATE:
 				//print("START_STATE");
-				
-				for(auto& button : buttons) {
-					sf::Vector2f position = button->GetPosition();
-					sf::Vector2f size = button->GetSize();
-					sf::FloatRect collider(position.x, position.y, size.x, size.y);
-					if(checkCollision(collider, mouseMove)){
-						//button->GetShape()->setFillColor(sf::Color(50, 200, 30));
-						if(mouseLeftDownFirst){
-							scoreValue -= scoreValue * button->GetValue();
-							score = ToPresisionString(scoreValue, 2) + " $";
-							scoreText.setString(score);
-							//button->GetShape()->setFillColor(sf::Color(50, 60, 200));
-						}
-					}
-					else{
-						//button->GetShape()->setFillColor(sf::Color(255, 255, 255));
-					}
-				}
 
 				break;
 			case DISTRIB_STATE:
@@ -491,19 +374,36 @@ int main(){
 		}
 
 
-		for(ICollidable*& object : collidableObjects){
-			BoxCollider box = object->GetCollider();
+		for(Button*& button : buttons)
+		{
+			if(button->GetActive())
+			{
+				sf::FloatRect rect = button->GetGlobalBounds();
 
-			if(BoxVsPoint(box, mouseMove)){
-				object->OnCollisionEnter();
-			}
-			else{
-				object->OnCollisionExit();
+				if(BoxVsPoint(rect, mouseMove))
+				{
+					button->OnCollisionEnter();
+					if(mouseLeftDownFirst)
+					{
+						for(Button*& button : buttons)
+						{
+							button->SetActive(false);
+						}
+						break;
+					}
+				}
+				else{
+					button->OnCollisionExit();
+				}
 			}
 		}
 
-		for(IDrawable*& object : drawableObjects){
-			object->Draw(window);
+		for(Button*& button : buttons)
+		{
+			if(button->GetActive())
+			{
+				button->Draw(window);
+			}
 		}
 		window.draw(scoreText);
 		//sh->Draw(window);
