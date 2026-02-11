@@ -6,6 +6,7 @@
 #include <chrono>
 #include <sstream>
 #include <iomanip>
+#include <random>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
@@ -61,6 +62,11 @@ enum STATE{
 	DISTRIB_STATE
 };
 
+struct Card{
+	int type;
+	int value;
+};
+
 class Player{
 public:
 	Player() : betAmount(0), tag("") {}
@@ -77,9 +83,13 @@ public:
 		return tag;
 	}
 
+	void AddToHand(Card* card){
+		hand.push_back(card);
+	}
 private:
 	float betAmount;
 	std::string tag;
+	std::vector<Card*> hand;
 };
 
 std::string ToPresisionString(float value, int digits){
@@ -102,7 +112,7 @@ public:
 	Button(sf::Vector2f position, sf::Vector2f size, sf::Font& font) : 
 		mPosition(position), mSize(size), 
 		mActive(true), mShape(new sf::RectangleShape()), 
-		mText(new sf::Text()), mColor(sf::Color::White)
+		mText(new sf::Text()), mColor(sf::Color::White), mTag(""), mValue(0)
 	{
 		mText->setFont(font);
 		mText->setCharacterSize(20);
@@ -171,6 +181,21 @@ public:
 		return mActive;
 	}
 
+	std::string GetTag(){
+		return mTag;
+	} 
+
+	void SetTag(std::string tag){
+		mTag = tag;
+	}
+
+	float GetValue(){
+		return mValue;
+	} 
+
+	void SetValue(float value){
+		mValue = value;
+	}
 private:
 	bool mActive;
 
@@ -180,7 +205,10 @@ private:
 	sf::Color mColor;
 
 	sf::Text* mText;
+	std::string mTag;
+	float mValue;
 };
+
 
 int main(){
 	int width = 800, height = 600;
@@ -202,32 +230,38 @@ int main(){
 		print("ERROR: font loading!");
 	}
 	
-	sf::Text scoreText;
-	scoreText.setFont(font);
-	scoreText.setString(score);
-	scoreText.setCharacterSize(20);
-	scoreText.setFillColor(sf::Color::Black);
 	//scoreText.setPosition();
 
-	std::string betContent = "Your bet: ";
-	sf::Text betText;
-	betText.setFont(font);
-	betText.setString(betContent);
-	betText.setCharacterSize(20);
-	betText.setFillColor(sf::Color::Black);
-	betText.setPosition(sf::Vector2f(width/2, 0));
-
-	// BUTTONS
-	Button* button_bet_1 = new Button(sf::Vector2f(width/2, height/2+60), sf::Vector2f(40, 40), font);
-	button_bet_1->SetText("10%");
-	
-	Button* button_bet_2 = new Button(sf::Vector2f(width/2+60, height/2+60), sf::Vector2f(40, 40), font);
-	button_bet_2->SetText("40%");
-	//
-
 	std::vector<Button*> buttons;
-	buttons.push_back(button_bet_1);
-	buttons.push_back(button_bet_2);
+	bool isStartInit = false;
+	bool isDistribInit = false;
+
+	std::vector<Card*> cards;
+
+	for(int j = 0; j < 4; j++)
+	{
+		for(int i = 0; i < 8; i++)
+		{
+			Card* card = new Card();
+			card->type = j;
+			card->value = i+2;
+			cards.push_back(card);
+		}
+
+		int lastValue = cards.back()->value + 1;
+		for(int i = 0; i < 4; i++)
+		{
+			Card* card = new Card();
+			card->type = j;
+			card->value = lastValue;
+			cards.push_back(card);
+		}
+
+		Card* card = new Card();
+		card->type = j;
+		card->value = 1;
+		cards.push_back(card);
+	}
 
 	sf::RenderWindow window(sf::VideoMode(width, height), "21");
 	
@@ -292,34 +326,100 @@ int main(){
 			case START_STATE:
 				//print("START_STATE");
 
+				//InitState()
+				if(isStartInit == false)
+				{
+					print("InitStart");
+					//DeletePreviosState()
+					for(auto it : buttons)
+					{
+						delete it;
+					}
+					buttons.clear();
+
+					// BUTTONS
+					Button* button_bet_1 = new Button(sf::Vector2f(width/2, height/2+60), sf::Vector2f(40, 40), font);
+					button_bet_1->SetValue(0.1f);
+					button_bet_1->SetText(std::to_string(int(button_bet_1->GetValue() * 100)) + "%");
+					button_bet_1->SetTag("btbet");
+					
+					Button* button_bet_2 = new Button(sf::Vector2f(width/2+60, height/2+60), sf::Vector2f(40, 40), font);
+					button_bet_2->SetValue(0.4f);
+					button_bet_2->SetText(std::to_string(int(button_bet_2->GetValue() * 100)) + "%");
+					button_bet_2->SetTag("btbet");
+
+					Button* button_score = new Button(sf::Vector2f(0, 0), sf::Vector2f(0, 0), font);
+					std::string score = ToPresisionString(scoreValue, 2) + " $";
+					button_score->SetText(score);
+					button_score->SetTag("btscore");
+
+					buttons.push_back(button_bet_1);
+					buttons.push_back(button_bet_2);
+					buttons.push_back(button_score);
+					
+					//
+
+					isStartInit = true;
+				}
 				break;
 			case DISTRIB_STATE:
+				if(isDistribInit == false)
+				{
+					print("InitDistrib");
+					//DeletePreviosState()
+					for(auto it : buttons)
+					{
+						delete it;
+					}
+					buttons.clear();
 
+					std::random_device rd;
+    				std::mt19937 g(rd());
+					std::shuffle(cards.begin(), cards.end(), g);
+
+					for(auto& it : players)
+					{
+						it->AddToHand(cards.back());
+						delete cards.back();
+						cards.pop_back();
+						it->AddToHand(cards.back());
+						delete cards.back();
+						cards.pop_back();
+					}
+
+					isDistribInit = true;
+				}
 				break;
 		}
 
 
 		for(Button*& button : buttons)
 		{
-			if(button->GetActive())
-			{
-				sf::FloatRect rect = button->GetGlobalBounds();
+			sf::FloatRect rect = button->GetGlobalBounds();
 
-				if(BoxVsPoint(rect, mouseMove))
-				{
-					button->OnCollisionEnter();
-					if(mouseLeftDownFirst)
+			std::string tag = button->GetTag();
+
+			if(BoxVsPoint(rect, mouseMove))
+			{
+				if(mouseLeftDownFirst){
+
+					if(tag == "btbet")
 					{
-						for(Button*& button : buttons)
-						{
-							button->SetActive(false);
-						}
-						break;
+						scoreValue -= scoreValue * button->GetValue();
+						state = STATE::DISTRIB_STATE;
 					}
+					
+
 				}
-				else{
-					button->OnCollisionExit();
-				}
+				button->OnCollisionEnter();
+			}
+			else{
+				button->OnCollisionExit();
+			}
+
+			if(tag == "btscore")
+			{
+				button->SetText(ToPresisionString(scoreValue, 2) + " $");
 			}
 		}
 
@@ -330,7 +430,6 @@ int main(){
 				button->Draw(window);
 			}
 		}
-		window.draw(scoreText);
 
 		window.display();
 
