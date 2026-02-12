@@ -63,9 +63,67 @@ enum STATE{
 	DISTRIB_STATE
 };
 
+struct Transform{
+
+	Transform() : mPosition(sf::Vector2f(0, 0)), mSize(sf::Vector2f(0, 0)) {}
+
+	void SetPosition(sf::Vector2f position)
+	{
+		mPosition = position;
+	}
+
+	void SetSize(sf::Vector2f size)
+	{
+		mSize = size;
+	}
+
+	sf::Vector2f GetPosition()
+	{
+		return mPosition;
+	}
+
+	sf::Vector2f GetSize()
+	{
+		return mSize;
+	}
+
+private:
+
+	sf::Vector2f mPosition;
+	sf::Vector2f mSize;
+};
+
 struct Card{
-	int type;
-	int value;
+	int mType;
+	int mValue;
+
+	Card(sf::Vector2f position, sf::Vector2f size, std::string text, sf::Font font, float type, float value) : mType(type), mValue(value)
+	{
+		mTransform.SetPosition(position);
+		mTransform.SetSize(size);
+
+		mText.setFont(font);
+		mText.setCharacterSize(20);
+		mText.setString(text);
+		mText.setFillColor(sf::Color::Black);
+		mText.setPosition(position);
+	}
+
+	void Draw(sf::RenderWindow& window)
+	{
+		mShape.setPosition(mTransform.GetPosition());
+		mShape.setSize(mTransform.GetSize());
+		mText.setPosition(mTransform.GetPosition());
+
+		window.draw(mShape);
+	}
+
+	Transform mTransform;
+
+private:
+
+	sf::RectangleShape mShape;
+	sf::Text mText;
 };
 
 class Player{
@@ -87,6 +145,30 @@ public:
 	void AddToHand(Card* card){
 		hand.push_back(card);
 	}
+
+	void AdjustCards(float width, float height){
+		float centerX = width / 2;
+		sf::Vector2f cardSize = hand.back()->mTransform.GetSize();
+		float offsetX = 20;
+		float offsetY = 20;
+		float distance = cardSize.x + offsetX;
+		float handWidth = hand.size() * distance;
+		float handX = centerX - handWidth / 2;
+		float handY = height - cardSize.y - offsetY;
+		float i = 0;
+		for(auto& it : hand)
+		{
+			it->mTransform.SetPosition(sf::Vector2(handX + i * distance, handY));
+			i++;
+		}
+	}
+
+	void Draw(sf::RenderWindow& window){
+		for(auto& it : hand){
+			it->Draw(window);
+		}
+	}
+
 private:
 	float betAmount;
 	std::string tag;
@@ -111,38 +193,20 @@ bool BoxVsPoint(sf::FloatRect& rect, sf::Vector2i& point){
 class Button {
 public:
 	Button(sf::Vector2f position, sf::Vector2f size, sf::Font& font) : 
-		mPosition(position), mSize(size), 
 		mActive(true), mShape(new sf::RectangleShape()), 
 		mText(new sf::Text()), mColor(sf::Color::White), mTag(""), mValue(0)
 	{
+		mTransform.SetPosition(position);
+		mTransform.SetSize(size);
+
 		mText->setFont(font);
 		mText->setCharacterSize(20);
 		mText->setFillColor(sf::Color::Black);
 		mText->setPosition(position);
 		
-		SetPosition(mPosition);
-		SetSize(mSize);
 		SetColor(mColor);
 	}
-	
-	void SetPosition(sf::Vector2f pos) {
-		mPosition = pos;
-		mShape->setPosition(mPosition);
-		mText->setPosition(mPosition);
-	}
 
-	sf::Vector2f GetPosition(){
-		return mPosition;
-	}
-
-	void SetSize(sf::Vector2f value) {
-		mSize = value;
-		mShape->setSize(mSize);
-	}
-
-	sf::Vector2f GetSize(){
-		return mSize;
-	}
 	
 	void SetText(std::string value){
 		mText->setString(value);
@@ -153,6 +217,10 @@ public:
 	}
 
 	void Draw(sf::RenderWindow& window){
+
+		mShape->setPosition(mTransform.GetPosition());
+		mShape->setSize(mTransform.GetSize());
+		mText->setPosition(mTransform.GetPosition());
 
 		window.draw(*mShape);
 		window.draw(*mText);
@@ -197,11 +265,12 @@ public:
 	void SetValue(float value){
 		mValue = value;
 	}
+
+	Transform mTransform;
+
 private:
 	bool mActive;
 
-	sf::Vector2f mSize;
-	sf::Vector2f mPosition;
 	sf::RectangleShape* mShape;
 	sf::Color mColor;
 
@@ -244,29 +313,29 @@ int main(){
 
 	std::vector<Card*> cards;
 
+	sf::Vector2f deckPosition(100, 200);
+	sf::Vector2f cardSize(100, 180);
 	for(int j = 0; j < 4; j++)
 	{
-		for(int i = 0; i < 8; i++)
+		for(int i = 0; i < 9; i++)
 		{
-			Card* card = new Card();
-			card->type = j;
-			card->value = i+2;
+			Card* card = new Card(deckPosition, cardSize, std::to_string(i+2), font, j, i+2);
 			cards.push_back(card);
 		}
 
-		int lastValue = cards.back()->value + 1;
-		for(int i = 0; i < 4; i++)
-		{
-			Card* card = new Card();
-			card->type = j;
-			card->value = lastValue;
-			cards.push_back(card);
-		}
+		int lastValue = cards.back()->mValue;
 
-		Card* card = new Card();
-		card->type = j;
-		card->value = 1;
-		cards.push_back(card);
+		Card* cardJ = new Card(deckPosition, cardSize, "J", font, j, lastValue);
+		cards.push_back(cardJ);
+
+		Card* cardQ = new Card(deckPosition, cardSize, "Q", font, j, lastValue);
+		cards.push_back(cardQ);
+
+		Card* cardK = new Card(deckPosition, cardSize, "K", font, j, lastValue);
+		cards.push_back(cardK);
+
+		Card* cardA = new Card(deckPosition, cardSize, "A", font, j, 1);
+		cards.push_back(cardA);
 	}
 
 	sf::RenderWindow window(sf::VideoMode(width, height), "21");
@@ -380,11 +449,13 @@ int main(){
 					for(auto& it : players)
 					{
 						it->AddToHand(cards.back());
-						delete cards.back();
+						//delete cards.back();
 						cards.pop_back();
 						it->AddToHand(cards.back());
-						delete cards.back();
+						//delete cards.back();
 						cards.pop_back();
+						
+						it->AdjustCards(width, height);
 					}
 
 					isDistribInit = true;
@@ -429,6 +500,11 @@ int main(){
 				button->Draw(window);
 			}
 		}
+
+		cards.back()->mTransform.SetPosition(sf::Vector2f(50, height / 2));
+		cards.back()->Draw(window);
+		
+
 		window.draw(scoreText);
 		window.display();
 
