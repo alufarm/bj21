@@ -1,6 +1,7 @@
 
 
 
+
 #include <iostream>
 #include <string>
 #include <chrono>
@@ -223,12 +224,17 @@ int main(){
 	int current_player_id = 0;
 	float scoreValue = 100.0f;
 
-	std::string score = ToPresisionString(scoreValue, 2) + " $";
-
 	sf::Font font;
 	if(!font.loadFromFile("Zepter_Pro.ttf")){
 		print("ERROR: font loading!");
 	}
+	
+	std::string score = ToPresisionString(scoreValue, 2) + " $";
+	sf::Text scoreText;
+	scoreText.setPosition(sf::Vector2f(0, 0));
+	scoreText.setFont(font);
+	scoreText.setCharacterSize(20);
+	scoreText.setString(score);
 	
 	//scoreText.setPosition();
 
@@ -348,14 +354,8 @@ int main(){
 					button_bet_2->SetText(std::to_string(int(button_bet_2->GetValue() * 100)) + "%");
 					button_bet_2->SetTag("btbet");
 
-					Button* button_score = new Button(sf::Vector2f(0, 0), sf::Vector2f(0, 0), font);
-					std::string score = ToPresisionString(scoreValue, 2) + " $";
-					button_score->SetText(score);
-					button_score->SetTag("btscore");
-
 					buttons.push_back(button_bet_1);
 					buttons.push_back(button_bet_2);
-					buttons.push_back(button_score);
 					
 					//
 
@@ -407,6 +407,8 @@ int main(){
 					{
 						scoreValue -= scoreValue * button->GetValue();
 						state = STATE::DISTRIB_STATE;
+						score = ToPresisionString(scoreValue, 2) + " $";
+						scoreText.setString(score);
 					}
 					
 
@@ -416,11 +418,8 @@ int main(){
 			else{
 				button->OnCollisionExit();
 			}
+			
 
-			if(tag == "btscore")
-			{
-				button->SetText(ToPresisionString(scoreValue, 2) + " $");
-			}
 		}
 
 		for(Button*& button : buttons)
@@ -430,7 +429,7 @@ int main(){
 				button->Draw(window);
 			}
 		}
-
+		window.draw(scoreText);
 		window.display();
 
 		mouseLeftDownFirst = false;
