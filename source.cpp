@@ -57,7 +57,8 @@ float interpolate(float a, float b, float p){
 enum STATE{
 	START_STATE,
 	DISTRIB_STATE,
-	ACTION_STATE
+	ACTION_STATE,
+	DEFEAT_STATE
 };
 
 struct Transform{
@@ -210,6 +211,10 @@ public:
 		return points;
 	}
 	
+	void ClearHand(){
+		hand.clear();
+	}
+	
 private:
 	
 	float points;
@@ -235,8 +240,23 @@ bool BoxVsPoint(sf::FloatRect& rect, sf::Vector2i& point){
 	return false;
 }
 
+static sf::Font font;
+
 class Button {
 public:
+
+	Button() : mActive(true), mShape(new sf::RectangleShape()), 
+		mText(new sf::Text()), mColor(sf::Color::White), mTag(""), mValue(0) 
+	{
+		mTransform.SetPosition(sf::Vector2f(0, 0));
+		mTransform.SetSize(sf::Vector2f(20, 20));
+		mText->setFont(font);
+		
+		mText->setCharacterSize(20);
+		mText->setFillColor(sf::Color::Black);
+		mText->setPosition(sf::Vector2f(0, 0));
+	}
+
 	Button(sf::Vector2f position, sf::Vector2f size, sf::Font& font) : 
 		mActive(true), mShape(new sf::RectangleShape()), 
 		mText(new sf::Text()), mColor(sf::Color::White), mTag(""), mValue(0)
@@ -247,7 +267,7 @@ public:
 		mText->setCharacterSize(20);
 		mText->setFont(font);
 		mText->setFillColor(sf::Color::Black);
-		mText->setPosition(position);
+		mText->setPosition(sf::Vector2f(int(position.x), int(position.y)));
 		
 		
 		
@@ -278,7 +298,7 @@ public:
 	}
 
 	void OnCollisionExit(){
-		SetColor(sf::Color::White);
+		SetColor(mColor);
 	}
 
 	void SetColor(sf::Color color){
@@ -326,6 +346,66 @@ private:
 	float mValue;
 };
 
+class FinishWindow{
+
+public:
+
+	sf::Vector2f mPosition; 
+	sf::Vector2f mSize;
+	sf::Color mBgColor;
+	Button button;
+
+
+	FinishWindow() : mPosition(sf::Vector2f(0, 0)), mSize(sf::Vector2f(20, 20)), mBgColor(sf::Color::White)
+	{
+		init();
+	}
+
+	FinishWindow(sf::Vector2f position, sf::Vector2f size) : mPosition(position), mSize(size), mBgColor(sf::Color::White)
+	{
+		init();
+	}
+	
+	void Draw(sf::RenderWindow& window)
+	{
+		window.draw(mShape);
+		button.Draw(window);
+		window.draw(mText);
+		
+	}
+
+private:
+
+	void init()
+	{
+		mShape.setPosition(mPosition);
+		mShape.setSize(mSize);
+		mShape.setFillColor(mBgColor);
+		
+		mText.setCharacterSize(20);
+		mText.setFont(font);
+		mText.setFillColor(sf::Color::Black);
+		mText.setString("Loser");
+		mText.setPosition(sf::Vector2f(
+			int(mPosition.x + mSize.x / 2 - mText.getGlobalBounds().width / 2),
+			int(mPosition.y + mSize.y / 4 + mSize.y / 8 - mText.getGlobalBounds().height / 2)
+			)
+		);
+		
+		button.SetText("Restart");
+		button.SetTag("restart");
+		button.mTransform.SetSize(sf::Vector2f(mSize.x / 4, mSize.y / 4));
+		button.mTransform.SetPosition(sf::Vector2f(
+			int(mPosition.x + mSize.x / 4 - button.mTransform.GetSize().x / 2), 
+			int(mPosition.y + mSize.y -  mSize.y / 4 - button.mTransform.GetSize().y / 2)));
+		button.SetColor(sf::Color(255, 1, 255));
+		
+
+	}
+
+	sf::RectangleShape mShape;
+	sf::Text mText;
+};
 
 int main(){
 	int width = 800, height = 600;
@@ -345,7 +425,6 @@ int main(){
 	int current_player_id = 0;
 	float money = 100.0f;
 
-	sf::Font font;
 	if(!font.loadFromFile("Zepter_Pro.ttf")){
 		print("ERROR: font loading!");
 	}
@@ -363,6 +442,7 @@ int main(){
 	bool isStartInit = false;
 	bool isDistribInit = false;
 	bool isActionInit = false;
+	bool isDefeatInit = false;
 
 	std::vector<Card*> cards;
 
@@ -370,28 +450,9 @@ int main(){
 	sf::Vector2f cardSize(100, 180);
 	
 	std::vector<std::string> types = {"Spades", "Hearts", "Diamonds", "Clubes"};
-	for(int j = 0; j < 4; j++)
-	{
-		for(int i = 0; i < 9; i++)
-		{
-			Card* card = new Card(deckPosition, cardSize, std::to_string(i+2) + "\n" + types[j], font, j, i+2);
-			cards.push_back(card);
-		}
 
-		int lastValue = cards.back()->mValue;
-
-		Card* cardJ = new Card(deckPosition, cardSize, "J\n" + types[j], font, j, lastValue);
-		cards.push_back(cardJ);
-
-		Card* cardQ = new Card(deckPosition, cardSize, "Q\n" + types[j], font, j, lastValue);
-		cards.push_back(cardQ);
-
-		Card* cardK = new Card(deckPosition, cardSize, "K\n" + types[j], font, j, lastValue);
-		cards.push_back(cardK);
-
-		Card* cardA = new Card(deckPosition, cardSize, "A\n" + types[j], font, j, 1);
-		cards.push_back(cardA);
-	}
+	FinishWindow finishWindow(sf::Vector2f(width/2-0.3f*width/2, height/2-0.3f*height/2), sf::Vector2f(0.3f * width, 0.3f * height));
+	bool isOverlay = false;
 
 	sf::RenderWindow window(sf::VideoMode(width, height), "21");
 	
@@ -449,24 +510,48 @@ int main(){
 			
 		}
 
-		window.clear(sf::Color::Cyan);		
+		window.clear(sf::Color(255, 200, 85));		
 
 		switch(state)
 		{
 			case START_STATE:
 				//print("START_STATE");
 
+				
+				
 				//InitState()
 				if(isStartInit == false)
 				{
 					print("InitStart");
 					//DeletePreviosState()
-					for(auto it : buttons)
-					{
-						delete it;
-					}
+
 					buttons.clear();
 
+					cards.clear();
+					
+					for(int j = 0; j < 4; j++)
+					{
+						for(int i = 0; i < 9; i++)
+						{
+							Card* card = new Card(deckPosition, cardSize, std::to_string(i+2) + "\n" + types[j], font, j, i+2);
+							cards.push_back(card);
+						}
+						
+						int lastValue = cards.back()->mValue;
+
+						Card* cardJ = new Card(deckPosition, cardSize, "J\n" + types[j], font, j, lastValue);
+						cards.push_back(cardJ);
+
+						Card* cardQ = new Card(deckPosition, cardSize, "Q\n" + types[j], font, j, lastValue);
+						cards.push_back(cardQ);
+
+						Card* cardK = new Card(deckPosition, cardSize, "K\n" + types[j], font, j, lastValue);
+						cards.push_back(cardK);
+
+						Card* cardA = new Card(deckPosition, cardSize, "A\n" + types[j], font, j, 1);
+						cards.push_back(cardA);
+					}
+					
 					// BUTTONS
 					Button* button_bet_1 = new Button(sf::Vector2f(width/2, height/2+60), sf::Vector2f(40, 40), font);
 					button_bet_1->SetValue(0.1f);
@@ -539,12 +624,12 @@ int main(){
 					{
 						float px = player->GetHandPosition().x + player->GetHandWidth();
 						
-						Button* button_hit = new Button(sf::Vector2f(px, player->GetHandPosition().y), sf::Vector2f(40, 40), font);
+						Button* button_hit = new Button(sf::Vector2f(px, player->GetHandPosition().y - 60), sf::Vector2f(40, 40), font);
 						button_hit->SetValue(0);
 						button_hit->SetText("HIT");
 						button_hit->SetTag("hit");
 						
-						Button* button_stand = new Button(sf::Vector2f(px + 40 + 20, player->GetHandPosition().y), sf::Vector2f(40, 40), font);
+						Button* button_stand = new Button(sf::Vector2f(px + 40 + 20, player->GetHandPosition().y - 60), sf::Vector2f(40, 40), font);
 						button_stand->SetValue(0);
 						button_stand->SetText("STAND");
 						button_stand->SetTag("stand");
@@ -558,6 +643,15 @@ int main(){
 					
 				}
 				break;
+			case DEFEAT_STATE:
+				if(isDefeatInit == false)
+				{
+					Button* restartButton = &finishWindow.button;
+					buttons.push_back(restartButton);
+					
+					isDefeatInit = true;
+				}
+				break;
 		}
 
 
@@ -566,39 +660,73 @@ int main(){
 			sf::FloatRect rect = button->GetGlobalBounds();
 
 			std::string tag = button->GetTag();
+			button->OnCollisionExit();
+			if(isOverlay == false){
+				
+				
+				
+				if(BoxVsPoint(rect, mouseMove))
+				{
+					if(mouseLeftDownFirst){
+						
+						if(tag == "btbet")
+						{
+							money -= money * button->GetValue();
+							state = STATE::DISTRIB_STATE;
+							score = ToPresisionString(money, 2) + " $";
+							scoreText.setString(score);
+						}
+						
+						if(tag == "hit")
+						{
+							if(cards.size() != 0){
+								player->AddToHand(cards.back());
+								cards.pop_back();
+								print(player->GetPoints());
+								player->AdjustCards();
+							}
+							
+							if(player->GetPoints() > 21)
+							{
+								isOverlay = true;
+								state = STATE::DEFEAT_STATE;
+							}
+						}
+						
+						if(tag == "stand")
+						{
+							
+						}
+						
 
-			if(BoxVsPoint(rect, mouseMove))
-			{
-				if(mouseLeftDownFirst){
-
-					if(tag == "btbet")
-					{
-						money -= money * button->GetValue();
-						state = STATE::DISTRIB_STATE;
-						score = ToPresisionString(money, 2) + " $";
-						scoreText.setString(score);
+						
 					}
-					
-					if(tag == "hit")
-					{
-						if(cards.size() != 0){
-							player->AddToHand(cards.back());
-							cards.pop_back();
-							print(player->GetPoints());
-							player->AdjustCards();
+					button->OnCollisionEnter();
+				}
+			}
+			else{
+				if(BoxVsPoint(rect, mouseMove))
+				{
+					if(mouseLeftDownFirst){
+						if(tag == "restart")
+						{
+							print("restart");
+							isStartInit = false;
+							isDistribInit = false;
+							isActionInit = false;
+							isDefeatInit = false;
+							
+							state = STATE::START_STATE;
+							isOverlay = false;
+							
+							for(auto& it : players){
+								it->ClearHand();
+							}
 						}
 					}
 					
-					if(tag == "stand")
-					{
-						
-					}
-
 				}
-				button->OnCollisionEnter();
-			}
-			else{
-				button->OnCollisionExit();
+				
 			}
 			
 
@@ -626,8 +754,9 @@ int main(){
 			}
 		}
 		
-
+		
 		window.draw(scoreText);
+		if(isOverlay)finishWindow.Draw(window);
 		window.display();
 
 		mouseLeftDownFirst = false;
