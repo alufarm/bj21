@@ -97,7 +97,7 @@ struct Card{
 	int mType;
 	int mValue;
 
-	Card(sf::Vector2f position, sf::Vector2f size, std::string text, sf::Font font, float type, float value) : mType(type), mValue(value)
+	Card(sf::Vector2f position, sf::Vector2f size, std::string text, sf::Font& font, float type, float value) : mType(type), mValue(value)
 	{
 		mTransform.SetPosition(position);
 		mTransform.SetSize(size);
@@ -116,6 +116,17 @@ struct Card{
 		mText.setPosition(mTransform.GetPosition());
 
 		window.draw(mShape);
+		window.draw(mText);
+	}
+
+	void SetText(std::string value)
+	{
+		mText.setString(value);
+	}
+	
+	std::string GetText()
+	{
+		return std::string(mText.getString());
 	}
 
 	Transform mTransform;
@@ -146,21 +157,28 @@ public:
 		hand.push_back(card);
 	}
 
-	void AdjustCards(float width, float height){
-		float centerX = width / 2;
+	void AdjustCards(){
 		sf::Vector2f cardSize = hand.back()->mTransform.GetSize();
 		float offsetX = 20;
 		float offsetY = 20;
 		float distance = cardSize.x + offsetX;
 		float handWidth = hand.size() * distance;
-		float handX = centerX - handWidth / 2;
-		float handY = height - cardSize.y - offsetY;
+		float handX = handPosition.x - handWidth / 2;
 		float i = 0;
 		for(auto& it : hand)
 		{
-			it->mTransform.SetPosition(sf::Vector2(handX + i * distance, handY));
+			it->mTransform.SetPosition(sf::Vector2(handX + i * distance, handPosition.y));
 			i++;
 		}
+		print(handPosition);
+	}
+
+	void SetHandPosition(sf::Vector2f position){
+		handPosition = position;
+	}
+	
+	sf::Vector2f GetHandPosition(){
+		return handPosition;
 	}
 
 	void Draw(sf::RenderWindow& window){
@@ -168,8 +186,10 @@ public:
 			it->Draw(window);
 		}
 	}
-
+	
 private:
+	
+	sf::Vector2f handPosition;
 	float betAmount;
 	std::string tag;
 	std::vector<Card*> hand;
@@ -199,10 +219,12 @@ public:
 		mTransform.SetPosition(position);
 		mTransform.SetSize(size);
 
-		mText->setFont(font);
 		mText->setCharacterSize(20);
+		mText->setFont(font);
 		mText->setFillColor(sf::Color::Black);
 		mText->setPosition(position);
+		
+		
 		
 		SetColor(mColor);
 	}
@@ -284,8 +306,13 @@ int main(){
 	int width = 800, height = 600;
 
 	STATE state = STATE::START_STATE;
+	
 	Player* player = new Player();
 	Player* dealer = new Player();
+	
+	player->SetTag("player");
+	dealer->SetTag("dealer");
+	
 	std::vector<Player*> players;
 	players.push_back(player);
 	players.push_back(dealer);
@@ -315,26 +342,28 @@ int main(){
 
 	sf::Vector2f deckPosition(100, 200);
 	sf::Vector2f cardSize(100, 180);
+	
+	std::vector<std::string> types = {"Spades", "Hearts", "Diamonds", "Clubes"};
 	for(int j = 0; j < 4; j++)
 	{
 		for(int i = 0; i < 9; i++)
 		{
-			Card* card = new Card(deckPosition, cardSize, std::to_string(i+2), font, j, i+2);
+			Card* card = new Card(deckPosition, cardSize, std::to_string(i+2) + "\n" + types[j], font, j, i+2);
 			cards.push_back(card);
 		}
 
 		int lastValue = cards.back()->mValue;
 
-		Card* cardJ = new Card(deckPosition, cardSize, "J", font, j, lastValue);
+		Card* cardJ = new Card(deckPosition, cardSize, "J\n" + types[j], font, j, lastValue);
 		cards.push_back(cardJ);
 
-		Card* cardQ = new Card(deckPosition, cardSize, "Q", font, j, lastValue);
+		Card* cardQ = new Card(deckPosition, cardSize, "Q\n" + types[j], font, j, lastValue);
 		cards.push_back(cardQ);
 
-		Card* cardK = new Card(deckPosition, cardSize, "K", font, j, lastValue);
+		Card* cardK = new Card(deckPosition, cardSize, "K\n" + types[j], font, j, lastValue);
 		cards.push_back(cardK);
 
-		Card* cardA = new Card(deckPosition, cardSize, "A", font, j, 1);
+		Card* cardA = new Card(deckPosition, cardSize, "A\n" + types[j], font, j, 1);
 		cards.push_back(cardA);
 	}
 
@@ -442,12 +471,24 @@ int main(){
 					}
 					buttons.clear();
 
+					// InitRandom()
 					std::random_device rd;
     				std::mt19937 g(rd());
+					//
+					
 					std::shuffle(cards.begin(), cards.end(), g);
 
 					for(auto& it : players)
 					{
+						if(it->GetTag() == "dealer")
+						{
+							print("deal");
+							it->SetHandPosition(sf::Vector2f(width / 2, 20));
+						}
+						if(it->GetTag() == "player")
+						{
+							it->SetHandPosition(sf::Vector2f(width / 2, height - cardSize.y - 20));
+						}
 						it->AddToHand(cards.back());
 						//delete cards.back();
 						cards.pop_back();
@@ -455,7 +496,7 @@ int main(){
 						//delete cards.back();
 						cards.pop_back();
 						
-						it->AdjustCards(width, height);
+						it->AdjustCards();
 					}
 
 					isDistribInit = true;
@@ -500,9 +541,17 @@ int main(){
 				button->Draw(window);
 			}
 		}
-
-		cards.back()->mTransform.SetPosition(sf::Vector2f(50, height / 2));
-		cards.back()->Draw(window);
+		
+		for(auto& it : players)
+		{
+			it->Draw(window);
+		}
+		
+		if(state == STATE::DISTRIB_STATE)
+		{
+			cards.back()->mTransform.SetPosition(sf::Vector2f(50, height / 2));
+			cards.back()->Draw(window);
+		}
 		
 
 		window.draw(scoreText);
