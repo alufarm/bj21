@@ -1,3 +1,7 @@
+
+
+
+
 #include <iostream>
 #include <string>
 #include <chrono>
@@ -56,7 +60,8 @@ float interpolate(float a, float b, float p){
 
 enum STATE{
 	START_STATE,
-	DISTRIB_STATE
+	DISTRIB_STATE,
+	ACTION_STATE
 };
 
 struct Transform{
@@ -93,7 +98,8 @@ struct Card{
 	int mType;
 	int mValue;
 
-	Card(sf::Vector2f position, sf::Vector2f size, std::string text, sf::Font& font, float type, float value) : mType(type), mValue(value)
+	Card(sf::Vector2f position, sf::Vector2f size, std::string text, sf::Font& font, float type, float value) 
+	: mType(type), mValue(value), hide(false)
 	{
 		mTransform.SetPosition(position);
 		mTransform.SetSize(size);
@@ -112,7 +118,10 @@ struct Card{
 		mText.setPosition(mTransform.GetPosition());
 
 		window.draw(mShape);
-		window.draw(mText);
+		if(hide == false)
+		{
+			window.draw(mText);
+		}
 	}
 
 	void SetText(std::string value)
@@ -125,17 +134,25 @@ struct Card{
 		return std::string(mText.getString());
 	}
 
+	void Hide(){
+		hide = true;
+	}
+	
+	void Show(){
+		hide = false;
+	}
+
 	Transform mTransform;
 
 private:
-
+	bool hide;
 	sf::RectangleShape mShape;
 	sf::Text mText;
 };
 
 class Player{
 public:
-	Player() : betAmount(0), tag("") {}
+	Player() : betAmount(0), tag(""), points(0), offsetX(20) {}
 	
 	void SetBet(float value) {
 		betAmount = value;
@@ -150,15 +167,20 @@ public:
 	}
 
 	void AddToHand(Card* card){
+		card->Show();
 		hand.push_back(card);
+		
+		float sum = 0;
+		for(auto& it : hand){
+			sum += it->mValue;
+		}
+		points = sum;
 	}
 
 	void AdjustCards(){
 		sf::Vector2f cardSize = hand.back()->mTransform.GetSize();
-		float offsetX = 20;
-		float offsetY = 20;
 		float distance = cardSize.x + offsetX;
-		float handWidth = hand.size() * distance;
+		float handWidth = hand.size() * distance - offsetX;
 		float handX = handPosition.x - handWidth / 2;
 		float i = 0;
 		for(auto& it : hand)
@@ -176,6 +198,11 @@ public:
 	sf::Vector2f GetHandPosition(){
 		return handPosition;
 	}
+	
+	float GetHandWidth(){
+		float width = hand.size() * (hand.back()->mTransform.GetSize().x + offsetX) - offsetX;
+		return width;
+	}
 
 	void Draw(sf::RenderWindow& window){
 		for(auto& it : hand){
@@ -183,8 +210,14 @@ public:
 		}
 	}
 	
+	float GetPoints(){
+		return points;
+	}
+	
 private:
 	
+	float points;
+	float offsetX;
 	sf::Vector2f handPosition;
 	float betAmount;
 	std::string tag;
@@ -314,14 +347,14 @@ int main(){
 	players.push_back(dealer);
 	
 	int current_player_id = 0;
-	float scoreValue = 100.0f;
+	float money = 100.0f;
 
 	sf::Font font;
 	if(!font.loadFromFile("Zepter_Pro.ttf")){
 		print("ERROR: font loading!");
 	}
 	
-	std::string score = ToPresisionString(scoreValue, 2) + " $";
+	std::string score = ToPresisionString(money, 2) + " $";
 	sf::Text scoreText;
 	scoreText.setPosition(sf::Vector2f(0, 0));
 	scoreText.setFont(font);
@@ -333,6 +366,7 @@ int main(){
 	std::vector<Button*> buttons;
 	bool isStartInit = false;
 	bool isDistribInit = false;
+	bool isActionInit = false;
 
 	std::vector<Card*> cards;
 
@@ -476,26 +510,56 @@ int main(){
 
 					for(auto& it : players)
 					{
+
+						it->AddToHand(cards.back());
+						//delete cards.back();
+						cards.pop_back();
+						it->AddToHand(cards.back());
+						//delete cards.back();
+
 						if(it->GetTag() == "dealer")
 						{
 							print("deal");
 							it->SetHandPosition(sf::Vector2f(width / 2, 20));
+							cards.back()->Hide();
 						}
+						cards.pop_back();
+						
 						if(it->GetTag() == "player")
 						{
 							it->SetHandPosition(sf::Vector2f(width / 2, height - cardSize.y - 20));
 						}
-						it->AddToHand(cards.back());
-						//delete cards.back();
-						cards.pop_back();
-						it->AddToHand(cards.back());
-						//delete cards.back();
-						cards.pop_back();
 						
 						it->AdjustCards();
 					}
 
 					isDistribInit = true;
+					state = STATE::ACTION_STATE;
+				}
+				break;
+			case ACTION_STATE:
+				if(player->GetPoints() < 21 || dealer->GetPoints() < 21){
+					if(isActionInit == false)
+					{
+						float px = player->GetHandPosition().x + player->GetHandWidth();
+						
+						Button* button_hit = new Button(sf::Vector2f(px, player->GetHandPosition().y), sf::Vector2f(40, 40), font);
+						button_hit->SetValue(0);
+						button_hit->SetText("HIT");
+						button_hit->SetTag("hit");
+						
+						Button* button_stand = new Button(sf::Vector2f(px + 40 + 20, player->GetHandPosition().y), sf::Vector2f(40, 40), font);
+						button_stand->SetValue(0);
+						button_stand->SetText("STAND");
+						button_stand->SetTag("stand");
+						
+						buttons.push_back(button_hit);
+						buttons.push_back(button_stand);
+						
+						isActionInit = true;
+					}
+					
+					
 				}
 				break;
 		}
@@ -513,12 +577,26 @@ int main(){
 
 					if(tag == "btbet")
 					{
-						scoreValue -= scoreValue * button->GetValue();
+						money -= money * button->GetValue();
 						state = STATE::DISTRIB_STATE;
-						score = ToPresisionString(scoreValue, 2) + " $";
+						score = ToPresisionString(money, 2) + " $";
 						scoreText.setString(score);
 					}
 					
+					if(tag == "hit")
+					{
+						if(cards.size() != 0){
+							player->AddToHand(cards.back());
+							cards.pop_back();
+							print(player->GetPoints());
+							player->AdjustCards();
+						}
+					}
+					
+					if(tag == "stand")
+					{
+						
+					}
 
 				}
 				button->OnCollisionEnter();
@@ -543,10 +621,13 @@ int main(){
 			it->Draw(window);
 		}
 		
-		if(state == STATE::DISTRIB_STATE)
+		if(state == STATE::DISTRIB_STATE || state == STATE::ACTION_STATE)
 		{
-			cards.back()->mTransform.SetPosition(sf::Vector2f(50, height / 2));
-			cards.back()->Draw(window);
+			if(cards.size() != 0){
+				cards.back()->mTransform.SetPosition(sf::Vector2f(50, 100));
+				cards.back()->Hide();
+				cards.back()->Draw(window);
+			}
 		}
 		
 
