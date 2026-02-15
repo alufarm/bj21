@@ -1,1 +1,1 @@
-cmd.exe /k "g++ -std=c++17 source.cpp -o source.exe -ISFML-2.5.1/include -LSFML-2.5.1/lib -lsfml-graphics -lsfml-window -lsfml-system && source.exe
+cmd.exe /k "g++ -std=c++17 source/main.cpp source/*.h -o main.exe -ISFML_TP/include -LSFML_TP/lib -lsfml-graphics -lsfml-window -lsfml-system && main.exe
