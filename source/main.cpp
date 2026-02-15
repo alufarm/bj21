@@ -13,7 +13,8 @@ enum STATE{
 	START_STATE,
 	DISTRIB_STATE,
 	ACTION_STATE,
-	DEFEAT_STATE
+	DEFEAT_STATE,
+	VICTORY_STATE
 };
 
 int main(){
@@ -52,6 +53,7 @@ int main(){
 	bool isDistribInit = false;
 	bool isActionInit = false;
 	bool isDefeatInit = false;
+	bool isVictoryInit = false;
 
 	std::vector<Card*> cards;
 
@@ -256,10 +258,21 @@ int main(){
 			case DEFEAT_STATE:
 				if(isDefeatInit == false)
 				{
+					finishWindow.SetText("Defeat");
 					Button* restartButton = &finishWindow.button;
 					buttons.push_back(restartButton);
 					
 					isDefeatInit = true;
+				}
+				break;
+			case VICTORY_STATE:
+				if(isVictoryInit == false)
+				{
+					finishWindow.SetText("Victory");
+					Button* restartButton = &finishWindow.button;
+					buttons.push_back(restartButton);
+					
+					isVictoryInit = true;
 				}
 				break;
 		}
@@ -292,12 +305,12 @@ int main(){
 							if(cards.size() != 0){
 								player->AddToHand(cards.back());
 								cards.pop_back();
-								print(player->GetPoints());
 								player->AdjustCards();
 							}
 							
 							if(player->GetPoints() > 21)
 							{
+								dealer->ShowCard();
 								isOverlay = true;
 								state = STATE::DEFEAT_STATE;
 							}
@@ -305,7 +318,22 @@ int main(){
 						
 						if(tag == "stand")
 						{
+							dealer->ShowCard();
+							if(dealer->GetPoints() < 17){
+								dealer->AddToHand(cards.back());
+								cards.pop_back();
+								dealer->AdjustCards();
+							}
+							isOverlay = true;
 							
+							if(dealer->GetPoints() > 21 || player->GetPoints() >= dealer->GetPoints())
+							{
+								state = STATE::VICTORY_STATE;
+							}
+							else if(player->GetPoints() < dealer->GetPoints())
+							{
+								state = STATE::DEFEAT_STATE;
+							}
 						}
 						
 
@@ -325,6 +353,7 @@ int main(){
 							isDistribInit = false;
 							isActionInit = false;
 							isDefeatInit = false;
+							isVictoryInit = false;
 							
 							state = STATE::START_STATE;
 							isOverlay = false;
