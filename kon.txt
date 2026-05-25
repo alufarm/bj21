@@ -1,0 +1,67 @@
+1. сделать ставки игрокам
+2. раздать две карты
+-> 2 игрокам (открытые) 
+-> 2 крупье (1 открытая, 1 закрытая)
+3. для каждого игрока выбрать действие
+-> взять ещё одну карту
+-> отказаться брать карту
+-> разделить руку
+-> удвоить ставку
+-> сдаться
+-> если очков > 21, то поражение
+4. вскрытие крупье
+-> если сумма очков крупье < 16, то крупье берёт ещё 1 карта (открытая)
+-> если сумма очков крупье > 17, то крупье завершает ход
+5. сравнение результатов 
+-> если у игрока очков больше, чем у крупье,
+   но меньше 22 побеждает игрок иначе крупье
+
+players[]
+
+Player
+PlayerAI:Player
+PlayerController:Player
+
+StartState
+->currentPlayer
+
+DistributionState
+->currentPlayer
+
+ActionState
+->currentPlayer
+
+ShowdownState
+->currentPlayer
+
+switch(state):
+	StartState
+		takeBet(currentPlayer)
+		if currentPlayer == lastPlayer then changeState(DistributionState)
+		currentPlayer = nextPlayer;
+	DisributionState
+		for all players do 
+			dealCard()
+		changeState(ActionState)
+	ActionState
+		if playerScore > 21 then defeat() 
+		switch(action):
+			hit
+				hit()
+			stand
+				stand()
+			double
+				double()
+			surrender
+				surrender()
+		if currentPlayer == lastPlayer then changeState(ShowdownState)
+		currentPlayer = nextPlayer
+	ShowdownState
+		ShowHiddenCard()
+		if dealerScore < 16 then hit(open)
+		if dealerScore > 17 then changeState(ComparisonState)
+	ComparisonState
+		if playerScore > dealerScore then win()
+
+			
+	
