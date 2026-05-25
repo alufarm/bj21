@@ -86,6 +86,12 @@ private:
         standButton->setColor(sf::Color::Red);
         elems.push_back(standButton);
 
+        restartButton->setSize(vec2f(100, 100/3));
+        restartButton->setInnerText("RESTART");
+        restartButton->setPosition((windowSize - restartButton->getSize()) / 2.0f);
+        restartButton->setColor(sf::Color::Green);
+        elems.push_back(restartButton);
+
         moneyLabel->setSize(vec2f(100, 100 / 3));
         moneyLabel->setColor(sf::Color(255, 255, 255, 0));
         moneyLabel->setInnerText(std::to_string(money));
@@ -147,6 +153,10 @@ private:
                 if(it == betButton)
                 {
                     betButtonCallback();
+                }
+                if(it == hitButton)
+                {
+                    hitCallback();
                 }
 
                 for (auto&& tableChip : chips) {
@@ -265,6 +275,7 @@ private:
         // Recalculate player hand layout
         player.calcHandLayout(getWindow());
 
+        money -= player.getBetAmount();
         // Double the bet amount and add chips to player then recalculate chips layout
         player.setBetAmount(player.getBetAmount() * 2);
     
@@ -276,27 +287,38 @@ private:
         }
         player.calcChipsLayout(getWindow());
 
+        // Move card from deck to dealer hand
+        dealer.hand.push_back(std::move(cards.back()));
+        cards.pop_back();
+        dealer.calcHandLayout(getWindow());
+
+        int playerValue = player.getHandValue();
+        int dealerValue = dealer.getHandValue();
+
+        // Win conditions
+        if(playerValue == 21 || dealerValue > 21)
+        {
+            hitButton->setActive(false);
+            standButton->setActive(false);
+
+            restartButton->setActive(true);
+            restartButton->setHidden(false);
+
+            money += player.getBetAmount() * 2;
+        }
+
+        // Lose conditions
+        if(dealerValue == 21 || playerValue > 21)
+        {
+            hitButton->setActive(false);
+            standButton->setActive(false);
+
+            restartButton->setActive(true);
+            restartButton->setHidden(false);
+        }
+
+        player.setBetAmount(0);
         
-        int value = player.getHandValue();
-
-        if(value == 21)
-        {
-            hitButton->setActive(false);
-            standButton->setActive(false);
-
-            restartButton->setActive(true);
-            restartButton->setHidden(false);
-        }
-
-        if(value > 21)
-        {
-            hitButton->setActive(false);
-            standButton->setActive(false);
-
-
-
-            restartButton->setActive(true);
-            restartButton->setHidden(false);
-        }
+        moneyLabel->setInnerText(std::to_string(money));
     }
 };
