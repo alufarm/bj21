@@ -12,7 +12,7 @@
             "preLaunchTask": "C/C++: g++.exe build active file",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "console": "internalConsole"
         },

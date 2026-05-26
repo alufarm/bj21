@@ -32,6 +32,9 @@ private:
     Player player;
     Player dealer;
 
+    std::vector<std::string> values = {"A","2","3","4","5","6","7","8","9","10","VALET","LADY","KING"};
+    std::vector<std::string> types = {"DIAMONDS", "SPADE", "HEARTS", "CLUBS"}; 
+
     void start() override
     {
         for(int i = 0; i < chipsCount; i++)
@@ -46,8 +49,6 @@ private:
             elems.push_back(chip);
         }
 
-        std::vector<std::string> values = {"A","2","3","4","5","6","7","8","9","10","VALET","LADY","KING"};
-        std::vector<std::string> types = {"DIAMONDS", "SPADE", "HEARTS", "CLUBS"}; 
         for(int i = 0; i < cardsCount / 13 && i < types.size(); i++)
         {
             for(int j = 0; j < cardsCount / 4 && j < values.size(); j++)
@@ -57,7 +58,8 @@ private:
                 card->setInnerText(values[j] + "\n" + types[i]);
                 card->setPosition(vec2f(j * cardsSize.x, i * cardsSize.y));
                 card->setColor(getRandomColor());
-                card->setValue(j > 9 ? 10 : j);
+                card->setValue(j + 1 > 9 ? 10 : j + 1);
+                print(card->getValue());
                 cards.push_back(card);
                 elems.push_back(card);
             }
@@ -158,6 +160,10 @@ private:
                 {
                     hitCallback();
                 }
+                if(it == restartButton)
+                {
+                    restart();
+                }
 
                 for (auto&& tableChip : chips) {
                     if (it == tableChip) {
@@ -189,18 +195,37 @@ private:
 
     void restart()
     {
+        // Set all elements to inactive and hidden
         for(auto&& it : elems)
         {
-            it->setActive(true);
+            it->setActive(false);
             it->setHidden(true);
         }
 
+        // Show interactable chips
         for(auto&& it : chips)
         {
             it->setActive(true);
             it->setHidden(false);
         }
 
+        // Return cards to deck and shuffle
+        for(auto&& it : player.hand)        
+        {
+            cards.push_back(it);
+        }
+        for(auto&& it : dealer.hand)        
+        {
+            cards.push_back(it);
+        }
+        std::shuffle(cards.begin(), cards.end(), std::default_random_engine(std::random_device{}()));
+
+        // Clear player and dealer hands and player chips
+        player.chips.clear();
+        player.hand.clear();
+        dealer.hand.clear();
+
+        // Show bet button, back card and money label
         betButton->setActive(true);
         betButton->setHidden(false);
 
@@ -248,7 +273,7 @@ private:
         dealer.hand.push_back(std::move(cards.back()));
         cards.pop_back();
         dealer.hand.push_back(std::move(cards.back()));
-        dealer.hand.back()->setCardHidden(true);
+        //dealer.hand.back()->setCardHidden(true);
         cards.pop_back();
 
         player.hand.push_back(std::move(cards.back()));
@@ -294,6 +319,8 @@ private:
 
         int playerValue = player.getHandValue();
         int dealerValue = dealer.getHandValue();
+        print(dealerValue);
+        print(playerValue);
 
         // Win conditions
         if(playerValue == 21 || dealerValue > 21)
@@ -305,16 +332,19 @@ private:
             restartButton->setHidden(false);
 
             money += player.getBetAmount() * 2;
+            print(money);
+            print("win");
         }
-
         // Lose conditions
-        if(dealerValue == 21 || playerValue > 21)
+        else if(dealerValue == 21 || playerValue > 21)
         {
             hitButton->setActive(false);
             standButton->setActive(false);
 
             restartButton->setActive(true);
             restartButton->setHidden(false);
+
+            print("lose");
         }
 
         player.setBetAmount(0);
