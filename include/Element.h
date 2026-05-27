@@ -25,6 +25,8 @@ public:
     bool active() { return isActive; }
     bool hidden() { return isHidden; }
     bool isCardHidden() { return cardHidden; }
+    void show();
+    void hide();
     
     void draw(sf::RenderWindow& window);
 

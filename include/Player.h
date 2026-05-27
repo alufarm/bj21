@@ -1,29 +1,40 @@
 #pragma once
 
-#include "Element.h"
+#include "Dealer.h"
 
-class Player
+class Player : public Dealer
 {
 public:
     Player();
-
-    void setPosition(vec2f position_);
-    vec2f getPosition() { return position; }
-
-    void calcHandLayout(sf::RenderWindow& window);
 
     void calcChipsLayout(sf::RenderWindow& window);
 
     void setBetAmount(int betAmount_){ betAmount = betAmount_; }
     int getBetAmount(){ return betAmount; }
 
-    int getHandValue();
+    void takeBet(int amount);
+
+    void returnBet(int amount);
+
+    void setMoney(int money_){ money = money_; };
+    int getMoney(){ return money; }
+
+    void doubleChips();
+
+    void setMoneyLabel(std::shared_ptr<Element> moneyLabel_);
+
+    void updateMoneyLabel();
+
+    void activateChips();
+
+    void deactivateChips();
 
     std::vector<std::shared_ptr<Element>> chips;
-    std::vector<std::shared_ptr<Element>> hand;
 
 private:
 
-    vec2f position;
+    std::shared_ptr<Element> moneyLabel;
     int betAmount;
+    int money;
 };
+

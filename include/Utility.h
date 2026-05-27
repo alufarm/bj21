@@ -93,3 +93,9 @@ inline sf::Color getRandomColor()
     int b = getRandomInt(0, 255);
     return sf::Color(r, g, b);
 }
+
+template<class T>
+std::shared_ptr<T> deepCopy(std::shared_ptr<T> ptr)
+{
+    return std::make_shared<T>(*ptr);;
+}

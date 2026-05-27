@@ -29,3 +29,15 @@ void Element::draw(sf::RenderWindow& window)
     window.draw(shape);
     window.draw(text);
 }
+
+void Element::show()
+{
+    setActive(true);
+    setHidden(false);
+}
+
+void Element::hide()
+{
+    setActive(false);
+    setHidden(true);
+}

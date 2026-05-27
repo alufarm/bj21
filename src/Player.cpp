@@ -1,24 +1,6 @@
 #include "Player.h"
 
-Player::Player() : position(vec2f(0, 0)), betAmount(0) {}
-
-void Player::setPosition(vec2f position_) { position = position_; }
-
-void Player::calcHandLayout(sf::RenderWindow& window)
-{
-    if(hand.empty()) { return; }
-    vec2f cardSize = hand.back()->getSize();
-    vec2f layoutPosition = vec2f(
-        position.x - hand.size() * cardSize.x / 2.0f,
-        position.y
-    );
-    
-    for(int i = 0; i < hand.size(); i++)
-    {
-        hand[i]->setPosition(vec2f(layoutPosition.x + i * (cardSize.x), layoutPosition.y));
-        hand[i]->setHidden(false);
-    }
-}
+Player::Player() : betAmount(0), money(100), moneyLabel(nullptr) {}
 
 void Player::calcChipsLayout(sf::RenderWindow& window)
 {
@@ -37,14 +19,54 @@ void Player::calcChipsLayout(sf::RenderWindow& window)
     }
 }
 
-int Player::getHandValue()
+void Player::takeBet(int amount)
 {
-    int value = 0;
+    setBetAmount(betAmount + amount);
+    setMoney(money - amount);
+    updateMoneyLabel();
+}
 
-    for(const auto& card : hand)
+void Player::returnBet(int amount)
+{
+    setBetAmount(betAmount - amount);
+    setMoney(money += amount);
+    updateMoneyLabel();
+}
+
+void Player::doubleChips()
+{
+    int chipsSize = chips.size();
+    for(int i = 0; i < chipsSize; ++i)
     {
-        value += card->getValue();
+        std::shared_ptr<Element> plChip = std::make_shared<Element>(*chips[i]);
+        chips.push_back(plChip);
     }
+}
 
-    return value;
+void Player::setMoneyLabel(std::shared_ptr<Element> moneyLabel_)
+{
+    moneyLabel = moneyLabel_;
+}
+
+void Player::updateMoneyLabel()
+{
+    if(!moneyLabel)return;
+    moneyLabel->setInnerText(std::to_string(money));
+    moneyLabel->setValue(money);
+}
+
+void Player::activateChips()
+{
+    for(auto&& it : chips)
+    {
+        it->setActive(true);
+    }
+}
+
+void Player::deactivateChips()
+{
+    for(auto&& it : chips)
+    {
+        it->setActive(false);
+    }
 }

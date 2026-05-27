@@ -25,12 +25,11 @@ private:
     std::shared_ptr<Element> restartButton = std::make_shared<Element>();
 
     std::shared_ptr<Element> moneyLabel = std::make_shared<Element>();
-    int money = 100;
 
     std::vector<std::shared_ptr<Element>> elems;
 
     Player player;
-    Player dealer;
+    Dealer dealer;
 
     std::vector<std::string> values = {"A","2","3","4","5","6","7","8","9","10","VALET","LADY","KING"};
     std::vector<std::string> types = {"DIAMONDS", "SPADE", "HEARTS", "CLUBS"}; 
@@ -59,11 +58,12 @@ private:
                 card->setPosition(vec2f(j * cardsSize.x, i * cardsSize.y));
                 card->setColor(getRandomColor());
                 card->setValue(j + 1 > 9 ? 10 : j + 1);
-                print(card->getValue());
                 cards.push_back(card);
                 elems.push_back(card);
             }
         }
+
+        print("after cards");
 
         backCard->setSize(cardsSize);
         backCard->setPosition(backCardPosition);
@@ -96,15 +96,21 @@ private:
 
         moneyLabel->setSize(vec2f(100, 100 / 3));
         moneyLabel->setColor(sf::Color(255, 255, 255, 0));
-        moneyLabel->setInnerText(std::to_string(money));
-        moneyLabel->setValue(money);
         moneyLabel->setFontSize(24);
         elems.push_back(moneyLabel);
 
         player.setPosition((vec2f)getWindow().getSize() / 2.0f + vec2f(0, getWindow().getSize().y / 4.0f));
         dealer.setPosition((vec2f)getWindow().getSize() / 2.0f - vec2f(0, getWindow().getSize().y / 4.0f));
         
+        player.setMoneyLabel(moneyLabel);
+
+        player.updateMoneyLabel();
+
+        print("init");
+
         restart();
+
+        print("start");
     }
 
     void update() override
@@ -198,15 +204,13 @@ private:
         // Set all elements to inactive and hidden
         for(auto&& it : elems)
         {
-            it->setActive(false);
-            it->setHidden(true);
+            it->hide();
         }
 
         // Show interactable chips
         for(auto&& it : chips)
         {
-            it->setActive(true);
-            it->setHidden(false);
+            it->show();
         }
 
         // Return cards to deck and shuffle
@@ -226,129 +230,124 @@ private:
         dealer.hand.clear();
 
         // Show bet button, back card and money label
-        betButton->setActive(true);
-        betButton->setHidden(false);
-
-        backCard->setActive(true);
-        backCard->setHidden(false);
-
-        moneyLabel->setActive(true);
-        moneyLabel->setHidden(false);
+        betButton->show();
+        backCard->show();
+        moneyLabel->show();
     }
 
     void chipOnClickCallback(std::shared_ptr<Element> element)
     {
-        std::shared_ptr<Element> plChip = std::make_shared<Element>(*element);
-        player.chips.push_back(plChip);
+        player.takeBet(element->getValue());
+        player.chips.push_back(deepCopy(element));
         player.calcChipsLayout(getWindow());
-        money -= plChip->getValue();
-        player.setBetAmount(player.getBetAmount() + plChip->getValue());
-        moneyLabel->setInnerText(std::to_string(money));
     }
 
     void playerOnClickChipsCallback(std::shared_ptr<Element> element)
     {
+        player.returnBet(element->getValue());
+
         player.chips.erase(std::remove(player.chips.begin(), player.chips.end(), element), player.chips.end());
         player.calcChipsLayout(getWindow());
-        money += element->getValue();
-        player.setBetAmount(player.getBetAmount() - element->getValue());
-        moneyLabel->setInnerText(std::to_string(money));
+    }
+
+    bool isStandWin()
+    {
+        int dealerValue = dealer.getHandValue();
+        int playerValue = player.getHandValue();
+        
+        return playerValue >= dealerValue;
+    }
+
+    void win()
+    {
+        
     }
 
     void betButtonCallback()
     {
         if(player.getBetAmount() == 0) return;
-        for(auto&& it : chips)
-        {
-            it->setActive(false);
-            it->setHidden(true);
-        }
-        for(auto&& it : player.chips)
-        {
-            it->setActive(false);
-        }
-        betButton->setActive(false);
-        betButton->setHidden(true);
 
-        dealer.hand.push_back(std::move(cards.back()));
-        cards.pop_back();
-        dealer.hand.push_back(std::move(cards.back()));
-        //dealer.hand.back()->setCardHidden(true);
-        cards.pop_back();
+        hideChips();
 
-        player.hand.push_back(std::move(cards.back()));
-        cards.pop_back();
-        player.hand.push_back(std::move(cards.back()));
-        cards.pop_back();
+        player.deactivateChips();
+        
+        dealer.takeCard(cards);
+        dealer.takeCard(cards);
+
+        player.takeCard(cards);
+        player.takeCard(cards);
 
         dealer.calcHandLayout(getWindow());
         player.calcHandLayout(getWindow());
 
-        hitButton->setActive(true);
-        hitButton->setHidden(false);
+        betButton->hide();
+        hitButton->hide();
+        standButton->hide();
 
-        standButton->setActive(true);
-        standButton->setHidden(false);
+        
+        int dealerValue = dealer.getHandValue();
+        int playerValue = player.getHandValue();
+
+
+        if(dealerValue > 21)
+        {
+            // win bust
+            
+            return;
+        }
+        if(playerValue > 21)
+        {
+            // lose bust
+
+            return;
+        }
+        
+
+        // Check win condition
+        if(player.isBlackjack())
+        {
+            // win blackjack
+
+            return;
+        }
+        if(dealer.isBlackjack())
+        {
+            // lose to blackjack
+
+            return;
+        }
     }
 
     void hitCallback()
     {
         // Move card from deck to player hand
-        player.hand.push_back(std::move(cards.back()));
-        cards.pop_back();
+        player.takeCard(cards);
+        player.takeBet(player.getBetAmount());
+        player.doubleChips();
 
-        // Recalculate player hand layout
         player.calcHandLayout(getWindow());
-
-        money -= player.getBetAmount();
-        // Double the bet amount and add chips to player then recalculate chips layout
-        player.setBetAmount(player.getBetAmount() * 2);
-    
-        int plChipsSize = player.chips.size();
-        for(int i = 0; i < plChipsSize; i++)
-        {
-            std::shared_ptr<Element> plChip = std::make_shared<Element>(*player.chips[i]);
-            player.chips.push_back(plChip);
-        }
         player.calcChipsLayout(getWindow());
 
-        // Move card from deck to dealer hand
-        dealer.hand.push_back(std::move(cards.back()));
-        cards.pop_back();
-        dealer.calcHandLayout(getWindow());
-
-        int playerValue = player.getHandValue();
         int dealerValue = dealer.getHandValue();
-        print(dealerValue);
-        print(playerValue);
-
-        // Win conditions
-        if(playerValue == 21 || dealerValue > 21)
+        if(dealerValue < 17)
         {
-            hitButton->setActive(false);
-            standButton->setActive(false);
-
-            restartButton->setActive(true);
-            restartButton->setHidden(false);
-
-            money += player.getBetAmount() * 2;
-            print(money);
-            print("win");
-        }
-        // Lose conditions
-        else if(dealerValue == 21 || playerValue > 21)
-        {
-            hitButton->setActive(false);
-            standButton->setActive(false);
-
-            restartButton->setActive(true);
-            restartButton->setHidden(false);
-
-            print("lose");
+            dealer.takeCard(cards);
+            dealer.calcHandLayout(getWindow());
         }
 
-        player.setBetAmount(0);
-        
-        moneyLabel->setInnerText(std::to_string(money));
+
+    }
+
+    void standCallback()
+    {
+        // 
+    }
+
+    void hideChips()
+    {
+        for(auto&& it : chips)
+        {
+            it->hide();
+        }
     }
 };
