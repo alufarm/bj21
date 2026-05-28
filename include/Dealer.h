@@ -22,6 +22,6 @@ public:
     std::vector<std::shared_ptr<Element>> hand;
 
 protected:
-    
+
     vec2f position;
 };

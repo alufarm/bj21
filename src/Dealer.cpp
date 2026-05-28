@@ -1,6 +1,8 @@
 #include "Dealer.h"
 
-Dealer::Dealer(){}
+Dealer::Dealer()
+{
+}
 
 void Dealer::setPosition(vec2f position_)
 {

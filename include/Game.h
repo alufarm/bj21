@@ -170,6 +170,11 @@ private:
                 {
                     restart();
                 }
+                if(it == standButton)
+                {
+                    print("STAND");
+                    standCallback();
+                }
 
                 for (auto&& tableChip : chips) {
                     if (it == tableChip) {
@@ -225,6 +230,7 @@ private:
         std::shuffle(cards.begin(), cards.end(), std::default_random_engine(std::random_device{}()));
 
         // Clear player and dealer hands and player chips
+        player.setBetAmount(0);
         player.chips.clear();
         player.hand.clear();
         dealer.hand.clear();
@@ -260,7 +266,48 @@ private:
 
     void win()
     {
+        int dealerValue = dealer.getHandValue();
+        int playerValue = player.getHandValue();
+
+        if(player.isBlackjack())
+        {
+            // Get money
+            player.setMoney(player.getMoney() + player.getBetAmount() * 1.5f);
+            player.updateMoneyLabel();
+            // Blackjack label
+            hitButton->setActive(false);
+            standButton->setActive(false);
+            restartButton->show();
+            return;
+        }
         
+        if(dealer.isBlackjack())
+        {
+            // Blackjack label
+            hitButton->setActive(false);
+            standButton->setActive(false);
+            restartButton->show();
+            return;
+        }
+
+        if(dealerValue > 21)
+        {
+            // Get money
+            player.setMoney(player.getMoney() + player.getBetAmount() * 1.5f);
+            player.updateMoneyLabel();
+            hitButton->setActive(false);
+            standButton->setActive(false);
+            restartButton->show();
+            return;
+        }
+        if(playerValue > 21)
+        {
+            // Bust label
+            hitButton->setActive(false);
+            standButton->setActive(false);
+            restartButton->show();
+            return;
+        }
     }
 
     void betButtonCallback()
@@ -281,52 +328,18 @@ private:
         player.calcHandLayout(getWindow());
 
         betButton->hide();
-        hitButton->hide();
-        standButton->hide();
+        hitButton->show();
+        standButton->show();
 
-        
-        int dealerValue = dealer.getHandValue();
-        int playerValue = player.getHandValue();
-
-
-        if(dealerValue > 21)
-        {
-            // win bust
-            
-            return;
-        }
-        if(playerValue > 21)
-        {
-            // lose bust
-
-            return;
-        }
-        
-
-        // Check win condition
-        if(player.isBlackjack())
-        {
-            // win blackjack
-
-            return;
-        }
-        if(dealer.isBlackjack())
-        {
-            // lose to blackjack
-
-            return;
-        }
+        win();
     }
 
     void hitCallback()
     {
         // Move card from deck to player hand
         player.takeCard(cards);
-        player.takeBet(player.getBetAmount());
-        player.doubleChips();
 
         player.calcHandLayout(getWindow());
-        player.calcChipsLayout(getWindow());
 
         int dealerValue = dealer.getHandValue();
         if(dealerValue < 17)
@@ -335,12 +348,33 @@ private:
             dealer.calcHandLayout(getWindow());
         }
 
-
+        win();
     }
 
     void standCallback()
     {
-        // 
+        int dealerValue = dealer.getHandValue();
+        if(dealerValue < 17)
+        {
+            dealer.takeCard(cards);
+            dealer.calcHandLayout(getWindow());
+        }
+
+        win();
+        if(isStandWin())
+        {
+            player.setMoney(player.getMoney() + player.getBetAmount() * 1.5f);
+            player.updateMoneyLabel();
+            hitButton->setActive(false);
+            standButton->setActive(false);
+            restartButton->show();
+        }
+        else
+        {
+            hitButton->setActive(false);
+            standButton->setActive(false);
+            restartButton->show();
+        }
     }
 
     void hideChips()
