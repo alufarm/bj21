@@ -6,6 +6,11 @@ class Game : public App
 {
 private:
 
+    enum GameState
+    {
+        PlayerTurn,
+    };
+
     vec2f windowSize = (vec2f)getWindow().getSize();
 
     std::vector<std::shared_ptr<Element>> chips;
@@ -62,6 +67,7 @@ private:
                 elems.push_back(card);
             }
         }
+        cards[0]->setValue(11);
 
         print("after cards");
 
@@ -320,6 +326,7 @@ private:
         
         dealer.takeCard(cards);
         dealer.takeCard(cards);
+        dealer.hand.back()->setCardHidden(true);
 
         player.takeCard(cards);
         player.takeCard(cards);
@@ -341,12 +348,16 @@ private:
 
         player.calcHandLayout(getWindow());
 
+        dealer.hand.back()->setCardHidden(false);
+
         int dealerValue = dealer.getHandValue();
         if(dealerValue < 17)
         {
             dealer.takeCard(cards);
             dealer.calcHandLayout(getWindow());
         }
+
+
 
         win();
     }

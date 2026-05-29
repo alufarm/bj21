@@ -39,6 +39,14 @@ int Dealer::getHandValue()
         value += card->getValue();
     }
 
+    for(const auto& card : hand)
+    {
+        if(card->getValue() == 11 && value > 21)
+        {
+            card->setValue(1);
+        }
+    }
+
     return value;
 }
 
