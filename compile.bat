@@ -2,7 +2,7 @@
 rem Включаем поддержку UTF-8 в консоли Windows
 chcp 65001 > nul
 
-set "COMPILER=D:/msys64/mingw64/bin/g++.exe"
+set "COMPILER=C:/msys64/ucrt64/bin/g++.exe"
 
 if not exist "%COMPILER%" (
     echo [ОШИБКА] Компилятор НЕ найден по пути: %COMPILER%

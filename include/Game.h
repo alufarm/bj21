@@ -11,9 +11,10 @@ struct Transform
 class Animation
 {
 public:
-    void setProceduralAnimation(std::vector<Transform> &transforms_)
+
+    Animation(std::shared_ptr<Element> target_) : target(target_) 
     {
-        transforms = transforms_;
+
     }
 
     void play()
@@ -23,14 +24,27 @@ public:
 
     void update(float dt)
     {
+       // print("Animate cycle");
         if (!isPlaying)
             return;
-        ++currentFrame;
-        if (currentFrame > transforms.size())
+       
+        if (currentFrame == transforms.size())
         {
             isPlaying = false;
             currentFrame = 0;
+            accumulator = 0;
+            return;
         }
+
+        if(accumulator >= timePoints[currentFrame])
+        {
+            target->setPosition(transforms[currentFrame].position);
+            ++currentFrame;
+        }
+
+        accumulator += dt;
+
+        //print("after Animate cycle");
     }
 
     Transform getFrame()
@@ -38,10 +52,20 @@ public:
         return transforms[currentFrame];
     }
 
+    void addFrame(float timePoint, Transform transform)
+    {
+        transforms.push_back(transform);
+        timePoints.push_back(timePoint);
+    }
+
 private:
     bool isPlaying = false;
     int currentFrame = 0;
     std::vector<Transform> transforms;
+    std::vector<float> timePoints;
+    float duration = 0;
+    float accumulator = 0;
+    std::shared_ptr<Element> target;
 };
 
 class Game : public App
@@ -81,7 +105,7 @@ private:
     std::vector<std::string> values = {"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "VALET", "LADY", "KING"};
     std::vector<std::string> types = {"DIAMONDS", "SPADE", "HEARTS", "CLUBS"};
 
-    std::shared_ptr<Animation> chipAnimation = std::make_shared<Animation>();
+    std::shared_ptr<Animation> chipAnimation = std::make_shared<Animation>(backCard);
 
     std::vector<std::shared_ptr<Animation>> animations;
 
@@ -98,7 +122,46 @@ private:
 
         player.updateMoneyLabel();
 
+        const int totalFrames = 900;
+const float totalDuration = 15.0f;
+const float timeStep = totalDuration / totalFrames; // ~0.016667 секунды
+
+for (int i = 1; i <= totalFrames; ++i)
+{
+    float t = i * timeStep; // Текущее время кадра
+    
+    // Нормализованное время от 0.0 до 1.0 для вычисления траектории
+    float progress = t / totalDuration; 
+
+    // --- Математический расчет сложной плавной траектории (S-образная дуга) ---
+    float x = 0.0f;
+    float y = 0.0f;
+
+    if (progress < 0.4f) // Первая фаза: движение вправо с изгибом
+    {
+        float p = progress / 0.4f;
+        x = p * 104.0f;
+        y = (1.0f - cos(p * 3.14159f)) * 25.0f;
+    }
+    else if (progress < 0.7f) // Вторая фаза: резкий уход вниз
+    {
+        float p = (progress - 0.4f) / 0.3f;
+        x = 104.0f + sin(p * 1.57079f) * 16.0f;
+        y = 50.0f + p * 314.0f;
+    }
+    else // Третья фаза: плавный возврат налево и торможение
+    {
+        float p = (progress - 0.7f) / 0.3f;
+        x = 120.0f - p * 119.19f;
+        y = 364.0f + sin(p * 1.57079f) * 5.21f;
+    }
+
+    // Добавляем сгенерированный кадр в систему анимации
+    chipAnimation->addFrame(t, Transform{vec2f(x, y), vec2f(50.0f, 50.0f)});
+}
+
         animations.push_back(chipAnimation);
+        chipAnimation->play();
 
         print("init");
 
@@ -110,6 +173,12 @@ private:
     void update() override
     {
         auto &window = getWindow();
+        
+        for(auto&& it : animations)
+        {
+            
+            it->update(getDeltaTime());
+        }
 
         drawAll(window);
         drawPlayerChips(window);

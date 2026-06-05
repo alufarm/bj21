@@ -29,6 +29,7 @@ void App::run()
     while(isRunning)
     {
         deltaTime = deltaClock.getElapsedTime().asSeconds();
+        deltaClock.restart();
         accumulator += deltaTime;
         if(accumulator > 1) { accumulator = 0; }
 

@@ -28,6 +28,13 @@ inline void print(vec2u val)
     std::cout << "[ " << val.x << ", " << val.y << "]" << std::endl;
 }
 
+template <typename T, typename ...Args>
+inline void print(T first, Args... args)
+{
+    print(first);
+    print(args...);
+}
+
 inline bool isPointInRect(vec2f point, vec2f position, vec2f size)
 {
     return point.x > position.x && point.x < position.x + size.x &&

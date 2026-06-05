@@ -12,6 +12,7 @@ public:
 
     sf::RenderWindow& getWindow() { return window; }
     static sf::Font& getGlobalFont() { return font; }
+    float getDeltaTime() { return deltaTime; }
 
     struct Mouse{ int x; int y; };
     static Mouse mouse;
