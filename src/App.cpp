@@ -1,6 +1,6 @@
 #include "App.h"
 
-std::string globalFontPath = "fonts/Roboto/static/Roboto-Regular.ttf"; 
+std::string globalFontPath = "resources/fonts/Roboto/static/Roboto-Regular.ttf"; 
 
 sf::Font App::font;
 App::Mouse App::mouse;
